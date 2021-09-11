@@ -13,10 +13,14 @@ export function activate(context: vscode.ExtensionContext) {
 		overviewRulerColor: 'blue',
 		overviewRulerLane: vscode.OverviewRulerLane.Right,
 		light: {
-			borderColor: 'darkblue'
+			borderColor: 'darkblue',
+			borderRadius: '2px',
+			cursor: 'pointer'
 		},
 		dark: {
-			borderColor: 'lightblue'
+			borderColor: 'lightblue',
+			borderRadius: '2px',
+			cursor: 'pointer'
 		}
 	});
 	const largeNumberDecorationType = vscode.window.createTextEditorDecorationType({
@@ -37,7 +41,7 @@ export function activate(context: vscode.ExtensionContext) {
 			const startPos = activeEditor.document.positionAt(match.index);
 			const endPos = activeEditor.document.positionAt(match.index + match[0].length);
 			const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'Number **' + match[0] + '**' };
-				largeNumbers.push(decoration);
+			smallNumbers.push(decoration);
 		}
 		activeEditor.setDecorations(smallNumberDecorationType, smallNumbers);
 		activeEditor.setDecorations(largeNumberDecorationType, largeNumbers);
