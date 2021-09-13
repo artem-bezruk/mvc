@@ -5,6 +5,11 @@ export function activate(context: vscode.ExtensionContext) {
 	let disposable = vscode.commands.registerCommand('extension.helloWorld', () => {
 		vscode.window.showInformationMessage('Hello Erlang!');
 	});
+	let diss = vscode.commands.registerTextEditorCommand('extension.findFilee', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
+		let textLine = textEditor.document.lineAt(textEditor.selection.start);
+		let str = textEditor.document.getText(textEditor.selection);
+		vscode.window.showInformationMessage(textLine.text);
+	});
 	console.log('decorator sample is activated');
 	let timeout: NodeJS.Timer | undefined = undefined;
 	const smallNumberDecorationType = vscode.window.createTextEditorDecorationType({
@@ -14,13 +19,11 @@ export function activate(context: vscode.ExtensionContext) {
 		overviewRulerLane: vscode.OverviewRulerLane.Right,
 		light: {
 			borderColor: 'darkblue',
-			borderRadius: '2px',
-			cursor: 'pointer'
+			borderRadius: '2px'
 		},
 		dark: {
 			borderColor: 'lightblue',
-			borderRadius: '2px',
-			cursor: 'pointer'
+			borderRadius: '2px'
 		}
 	});
 	const largeNumberDecorationType = vscode.window.createTextEditorDecorationType({
@@ -67,6 +70,7 @@ export function activate(context: vscode.ExtensionContext) {
 			triggerUpdateDecorations();
 		}
 	}, null, context.subscriptions);
+	context.subscriptions.push(diss);
 	context.subscriptions.push(disposable);
 }
 export function deactivate() { }
