@@ -19,11 +19,15 @@ export function activate(context: vscode.ExtensionContext) {
 			const endPos = activeEditor.document.positionAt(match.index + match[0].length);
 			const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'Number **' + match[0] + '**' };
 			let strResultMatch = match[0];
-			vscode.window.showInformationMessage(strResultMatch);
 			parsePhpClassAndMethod(strResultMatch);
 		}
 	});
 	function parsePhpClassAndMethod(str: string) {
+		let strFiltered = str.replace(',', '');
+		strFiltered = strFiltered.trim();
+		strFiltered = strFiltered.replace(/[\']/g, '');
+		strFiltered = strFiltered.replace(/["]/g, '');
+		vscode.window.showInformationMessage(strFiltered);
 	}
 	console.log('decorator sample is activated');
 	let timeout: NodeJS.Timer | undefined = undefined;
