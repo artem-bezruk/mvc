@@ -30,6 +30,9 @@ export function activate(context: vscode.ExtensionContext) {
 		let arrStr = strFiltered.split('@');
 		let strPhpNamespace = arrStr[0];
 		let strPhpMethodName = arrStr[1];
+		let arrStrPhpNamespace = strPhpNamespace.split('\\');
+		let strFilenamePrefix = arrStrPhpNamespace[arrStrPhpNamespace.length - 1];
+		vscode.window.showInformationMessage(strFilenamePrefix);
 	}
 	console.log('decorator sample is activated');
 	let timeout: NodeJS.Timer | undefined = undefined;
