@@ -1,11 +1,11 @@
 'use strict';
 import * as vscode from 'vscode';
 export function activate(context: vscode.ExtensionContext) {
-	console.log('Congratulations, your extension "hello" is now active!');
-	let disposable = vscode.commands.registerCommand('extension.helloWorld', () => {
-		vscode.window.showInformationMessage('Hello Erlang!');
+	console.log('Congratulations, your extension "LaravelRouteClassOpener" is now active!');
+	let disposable = vscode.commands.registerCommand('enableLaravelRouteClassOpener', () => {
+		vscode.window.showInformationMessage('Laravel Route Class Opener enabled!');
 	});
-	let diss = vscode.commands.registerTextEditorCommand('extension.findFilee', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
+	let diss = vscode.commands.registerTextEditorCommand('extension.openPhpClassFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
 		let textLine = textEditor.document.lineAt(textEditor.selection.start);
 		let str = textEditor.document.getText(textEditor.selection);
 		let activeEditor = textEditor;
@@ -32,20 +32,33 @@ export function activate(context: vscode.ExtensionContext) {
 		let strPhpMethodName = arrStr[1];
 		let arrStrPhpNamespace = strPhpNamespace.split('\\');
 		let strFilenamePrefix = arrStrPhpNamespace[arrStrPhpNamespace.length - 1];
-		vscode.window.showInformationMessage(strFilenamePrefix);
 		let files = vscode.workspace.findFiles('**/' + strFilenamePrefix + '.php');
 		files.then((uris: vscode.Uri[]) => {
 			let filePath = uris[0].toString();
-			vscode.window.showInformationMessage(JSON.stringify(filePath));
 			vscode.workspace.openTextDocument(uris[0]).then((textDocument: vscode.TextDocument) => {
-				vscode.window.showTextDocument(textDocument);
+				let strFunctionPrefix = 'function ';
+				let docText = textDocument.getText();
+				let methodPosition: number = docText.indexOf(strFunctionPrefix + strPhpMethodName);
+				let posStart = textDocument.positionAt(methodPosition + strFunctionPrefix.length);
+				let posEnd = textDocument.positionAt(methodPosition + strFunctionPrefix.length);
+				let range = new vscode.Range(
+					posStart,
+					posEnd
+				);
+				let options: vscode.TextDocumentShowOptions = {
+					viewColumn: undefined,
+					preserveFocus: false,
+					preview: false,
+					selection: range
+				};
+				vscode.window.showTextDocument(textDocument.uri, options);
 			});
 		})
 	}
 	console.log('decorator sample is activated');
 	let timeout: NodeJS.Timer | undefined = undefined;
 	const smallNumberDecorationType = vscode.window.createTextEditorDecorationType({
-		borderWidth: '1px',
+		borderWidth: '0.1px',
 		borderStyle: 'solid',
 		overviewRulerColor: 'blue',
 		overviewRulerLane: vscode.OverviewRulerLane.Right,
