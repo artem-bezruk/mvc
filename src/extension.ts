@@ -9,7 +9,7 @@ export function activate(context: vscode.ExtensionContext) {
 		let textLine = textEditor.document.lineAt(textEditor.selection.start);
 		let str = textEditor.document.getText(textEditor.selection);
 		let activeEditor = textEditor;
-		const regEx = /([,])(.?)(['])(.+)([a-zA-Z]{1,})([@])([a-zA-Z]{1,})(['])/g;
+		const regEx = /'([a-zA-Z\\]+)\w+@\w+'/g;
 		const text = textLine.text;
 		const smallNumbers: vscode.DecorationOptions[] = [];
 		const largeNumbers: vscode.DecorationOptions[] = [];
@@ -36,11 +36,10 @@ export function activate(context: vscode.ExtensionContext) {
 		files.then((uris: vscode.Uri[]) => {
 			let filePath = uris[0].toString();
 			vscode.workspace.openTextDocument(uris[0]).then((textDocument: vscode.TextDocument) => {
-				let strFunctionPrefix = 'function ';
 				let docText = textDocument.getText();
-				let methodPosition: number = docText.indexOf(strFunctionPrefix + strPhpMethodName);
-				let posStart = textDocument.positionAt(methodPosition + strFunctionPrefix.length);
-				let posEnd = textDocument.positionAt(methodPosition + strFunctionPrefix.length);
+				let methodPosition: number = docText.indexOf('function ' + strPhpMethodName + '(');
+				let posStart = textDocument.positionAt('function '.length + methodPosition + '('.length);
+				let posEnd = textDocument.positionAt('function '.length + methodPosition + '('.length);
 				let range = new vscode.Range(
 					posStart,
 					posEnd
@@ -49,16 +48,16 @@ export function activate(context: vscode.ExtensionContext) {
 					viewColumn: undefined,
 					preserveFocus: false,
 					preview: false,
-					selection: range
+					selection: range,
 				};
 				vscode.window.showTextDocument(textDocument.uri, options);
 			});
 		})
 	}
-	console.log('decorator sample is activated');
+	console.log('Decorator sample is activated');
 	let timeout: NodeJS.Timer | undefined = undefined;
 	const smallNumberDecorationType = vscode.window.createTextEditorDecorationType({
-		borderWidth: '0.1px',
+		borderWidth: '1px',
 		borderStyle: 'solid',
 		overviewRulerColor: 'blue',
 		overviewRulerLane: vscode.OverviewRulerLane.Right,
@@ -80,7 +79,7 @@ export function activate(context: vscode.ExtensionContext) {
 		if (!activeEditor) {
 			return;
 		}
-		const regEx = /([,])(.?)(['])(.+)([a-zA-Z]{1,})([@])([a-zA-Z]{1,})(['])/g;
+		const regEx = /'([a-zA-Z\\]+)\w+@\w+'/g;
 		const text = activeEditor.document.getText();
 		const smallNumbers: vscode.DecorationOptions[] = [];
 		const largeNumbers: vscode.DecorationOptions[] = [];
@@ -118,4 +117,5 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(diss);
 	context.subscriptions.push(disposable);
 }
-export function deactivate() { }
+export function deactivate() {
+}
