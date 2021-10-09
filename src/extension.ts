@@ -17,7 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
 		while (match = regEx.exec(text)) {
 			const startPos = activeEditor.document.positionAt(match.index);
 			const endPos = activeEditor.document.positionAt(match.index + match[0].length);
-			const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'Number **' + match[0] + '**' };
+			const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'File **' + match[0] + '**' };
 			let strResultMatch = match[0];
 			parsePhpClassAndMethod(strResultMatch);
 		}
@@ -87,7 +87,7 @@ export function activate(context: vscode.ExtensionContext) {
 		while (match = regEx.exec(text)) {
 			const startPos = activeEditor.document.positionAt(match.index);
 			const endPos = activeEditor.document.positionAt(match.index + match[0].length);
-			const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'Number **' + match[0] + '**' };
+			const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'File **' + match[0] + '**' };
 			smallNumbers.push(decoration);
 		}
 		activeEditor.setDecorations(smallNumberDecorationType, smallNumbers);
@@ -101,17 +101,14 @@ export function activate(context: vscode.ExtensionContext) {
 		timeout = setTimeout(updateDecorations, 500);
 	}
 	if (activeEditor) {
-		triggerUpdateDecorations();
 	}
 	vscode.window.onDidChangeActiveTextEditor(editor => {
 		activeEditor = editor;
 		if (editor) {
-			triggerUpdateDecorations();
 		}
 	}, null, context.subscriptions);
 	vscode.workspace.onDidChangeTextDocument(event => {
 		if (activeEditor && event.document === activeEditor.document) {
-			triggerUpdateDecorations();
 		}
 	}, null, context.subscriptions);
 	context.subscriptions.push(diss);
