@@ -23,7 +23,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 	function parsePhpClassAndMethod(str: string) {
-		let strFiltered = str.replace(',', '');
+		let strFiltered = str.replace(/[,]/g, '');
 		strFiltered = strFiltered.trim();
 		strFiltered = strFiltered.replace(/[\']/g, '');
 		strFiltered = strFiltered.replace(/["]/g, '');
@@ -34,23 +34,32 @@ export function activate(context: vscode.ExtensionContext) {
 		let strFilenamePrefix = arrStrPhpNamespace[arrStrPhpNamespace.length - 1];
 		let files = vscode.workspace.findFiles('**/' + strFilenamePrefix + '.php');
 		files.then((uris: vscode.Uri[]) => {
-			let filePath = uris[0].toString();
-			vscode.workspace.openTextDocument(uris[0]).then((textDocument: vscode.TextDocument) => {
-				let docText = textDocument.getText();
-				let methodPosition: number = docText.indexOf('function ' + strPhpMethodName + '(');
-				let posStart = textDocument.positionAt('function '.length + methodPosition + '('.length);
-				let posEnd = textDocument.positionAt('function '.length + methodPosition + '('.length);
-				let range = new vscode.Range(
-					posStart,
-					posEnd
-				);
-				let options: vscode.TextDocumentShowOptions = {
-					viewColumn: undefined,
-					preserveFocus: false,
-					preview: false,
-					selection: range,
-				};
-				vscode.window.showTextDocument(textDocument.uri, options);
+			uris.forEach((uri, i, uriss) => {
+				let filePath = uri.toString();
+				vscode.workspace.openTextDocument(uri).then((textDocument: vscode.TextDocument) => {
+					let docText = textDocument.getText();
+					if (docText.indexOf('<?php') == 0) {
+					} else {
+						return;
+					}
+					let methodPosition: number = docText.indexOf('function ' + strPhpMethodName + '(');
+					if (methodPosition == -1) {
+						return;
+					}
+					let posStart = textDocument.positionAt('function '.length + methodPosition + '('.length);
+					let posEnd = textDocument.positionAt('function '.length + methodPosition + '('.length);
+					let range = new vscode.Range(
+						posStart,
+						posEnd
+					);
+					let options: vscode.TextDocumentShowOptions = {
+						viewColumn: undefined,
+						preserveFocus: false,
+						preview: true,
+						selection: range,
+					};
+					vscode.window.showTextDocument(textDocument.uri, options);
+				});
 			});
 		})
 	}
