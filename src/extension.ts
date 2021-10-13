@@ -46,8 +46,14 @@ export function activate(context: vscode.ExtensionContext) {
 					if (methodPosition == -1) {
 						return;
 					}
-					let posStart = textDocument.positionAt('function '.length + methodPosition + '('.length);
-					let posEnd = textDocument.positionAt('function '.length + methodPosition + '('.length);
+					let strNamespacePrefix = '';
+					let namespacePosition: number = docText.indexOf('namespace App\\Http\\Controllers' + strNamespacePrefix);
+					if (namespacePosition == -1) {
+						return;
+					}
+					vscode.window.showInformationMessage(strPhpNamespace);
+					let posStart = textDocument.positionAt(methodPosition + 'function '.length);
+					let posEnd = textDocument.positionAt('function '.length + methodPosition + strPhpMethodName.length);
 					let range = new vscode.Range(
 						posStart,
 						posEnd
