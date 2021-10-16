@@ -42,7 +42,7 @@ export function activate(context: vscode.ExtensionContext) {
 					} else {
 						return;
 					}
-					let methodPosition: number = docText.indexOf('function ' + strPhpMethodName + '(');
+					let methodPosition: number = docText.indexOf(' function ' + strPhpMethodName + '(');
 					if (methodPosition == -1) {
 						return;
 					}
@@ -51,9 +51,13 @@ export function activate(context: vscode.ExtensionContext) {
 					if (namespacePosition == -1) {
 						return;
 					}
+					let classNamePosition: number = docText.indexOf('class ' + strFilenamePrefix + ' ');
+					if (classNamePosition == -1) {
+						return;
+					}
 					vscode.window.showInformationMessage(strPhpNamespace);
-					let posStart = textDocument.positionAt(methodPosition + 'function '.length);
-					let posEnd = textDocument.positionAt('function '.length + methodPosition + strPhpMethodName.length);
+					let posStart = textDocument.positionAt(methodPosition + ' function '.length);
+					let posEnd = textDocument.positionAt(' function '.length + methodPosition + strPhpMethodName.length);
 					let range = new vscode.Range(
 						posStart,
 						posEnd
