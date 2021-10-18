@@ -42,10 +42,6 @@ export function activate(context: vscode.ExtensionContext) {
 					} else {
 						return;
 					}
-					let methodPosition: number = docText.indexOf(' function ' + strPhpMethodName + '(');
-					if (methodPosition == -1) {
-						return;
-					}
 					let strNamespacePrefix = '';
 					let namespacePosition: number = docText.indexOf('namespace App\\Http\\Controllers' + strNamespacePrefix);
 					if (namespacePosition == -1) {
@@ -53,6 +49,10 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 					let classNamePosition: number = docText.indexOf('class ' + strFilenamePrefix + ' ');
 					if (classNamePosition == -1) {
+						return;
+					}
+					let methodPosition: number = docText.indexOf(' function ' + strPhpMethodName + '(');
+					if (methodPosition == -1) {
 						return;
 					}
 					vscode.window.showInformationMessage(strPhpNamespace);
