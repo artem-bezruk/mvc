@@ -27,9 +27,15 @@ export function activate(context: vscode.ExtensionContext) {
 		strFiltered = strFiltered.trim();
 		strFiltered = strFiltered.replace(/[\']/g, '');
 		strFiltered = strFiltered.replace(/["]/g, '');
-		let arrStr: string[] = strFiltered.split('@');
-		let strPhpNamespace: string = arrStr[0];
-		let strPhpMethodName: string = arrStr[1];
+		let strPhpNamespace: string = '';
+		let strPhpMethodName: string = '';
+		if (strFiltered.indexOf('@') == -1) {
+			strPhpNamespace = strFiltered;
+		} else {
+			let arrStr: string[] = strFiltered.split('@');
+			strPhpNamespace = arrStr[0];
+			strPhpMethodName = arrStr[1];
+		}
 		let arrStrPhpNamespace: string[] = strPhpNamespace.split('\\');
 		let strFilenamePrefix: string = arrStrPhpNamespace[arrStrPhpNamespace.length - 1];
 		let files: Thenable<vscode.Uri[]> = vscode.workspace.findFiles('**/' + strFilenamePrefix + '.php');
@@ -51,14 +57,19 @@ export function activate(context: vscode.ExtensionContext) {
 					if (classNamePosition == -1) {
 						return;
 					}
-					let methodPosition: number = docText.indexOf(' function ' + strPhpMethodName + '(');
-					if (methodPosition == -1) {
-						return;
+					let posStart: vscode.Position = textDocument.positionAt(classNamePosition + 'class '.length);
+					let posEnd: vscode.Position = textDocument.positionAt('class '.length + classNamePosition + strPhpMethodName.length);
+					if (strPhpMethodName.length > 0) {
+						let methodPosition: number = docText.indexOf(' function ' + strPhpMethodName + '(');
+						if (methodPosition == -1) {
+							return;
+						} else {
+							posStart = textDocument.positionAt(methodPosition + ' function '.length);
+							posEnd = textDocument.positionAt(' function '.length + methodPosition + strPhpMethodName.length);
+						}
 					}
 					vscode.window.showInformationMessage(strPhpNamespace);
-					let posStart: vscode.Position = textDocument.positionAt(methodPosition + ' function '.length);
-					let posEnd: vscode.Position = textDocument.positionAt(' function '.length + methodPosition + strPhpMethodName.length);
-					let range: vscode.Range = new vscode.Range(
+					let selectionRange: vscode.Range = new vscode.Range(
 						posStart,
 						posEnd
 					);
@@ -66,7 +77,7 @@ export function activate(context: vscode.ExtensionContext) {
 						viewColumn: undefined,
 						preserveFocus: false,
 						preview: true,
-						selection: range,
+						selection: selectionRange,
 					};
 					vscode.window.showTextDocument(textDocument.uri, options);
 				});
