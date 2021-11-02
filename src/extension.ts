@@ -33,11 +33,11 @@ export function activate(context: vscode.ExtensionContext) {
 			strPhpNamespace = strFiltered;
 		} else {
 			let arrStr: string[] = strFiltered.split('@');
-			strPhpNamespace = arrStr[0];
+			strPhpNamespace = arrStr[0]; 
 			strPhpMethodName = arrStr[1];
 		}
-		let arrStrPhpNamespace: string[] = strPhpNamespace.split('\\');
-		let strFilenamePrefix: string = arrStrPhpNamespace[arrStrPhpNamespace.length - 1];
+		let arrStrPhpNamespace: string[] = strPhpNamespace.split('\\'); 
+		let strFilenamePrefix: string = arrStrPhpNamespace[arrStrPhpNamespace.length - 1]; 
 		let files: Thenable<vscode.Uri[]> = vscode.workspace.findFiles('**/' + strFilenamePrefix + '.php');
 		files.then((uris: vscode.Uri[]) => {
 			uris.forEach((uri, i: number, uriss) => {
@@ -51,6 +51,16 @@ export function activate(context: vscode.ExtensionContext) {
 					let strNamespacePrefix: string = '';
 					let namespacePosition: number = docText.indexOf('namespace App\\Http\\Controllers' + strNamespacePrefix);
 					if (namespacePosition == -1) {
+						return;
+					}
+					let arrNamespaceWithoutClassName = arrStrPhpNamespace.slice(0, -1); 
+					let strExtraSeparator: string = '\\';
+					if (arrStrPhpNamespace.length == 1) {
+						strExtraSeparator = ''; 
+					}
+					let strFullNamespace = 'namespace App\\Http\\Controllers' + strExtraSeparator + arrNamespaceWithoutClassName.join('\\') + ';';
+					let exactNamespacePosition: number = docText.indexOf(strFullNamespace);
+					if (exactNamespacePosition == -1) {
 						return;
 					}
 					let classNamePosition: number = docText.indexOf('class ' + strFilenamePrefix + ' ');
@@ -68,7 +78,6 @@ export function activate(context: vscode.ExtensionContext) {
 							posEnd = textDocument.positionAt(' function '.length + methodPosition + strPhpMethodName.length);
 						}
 					}
-					vscode.window.showInformationMessage(strPhpNamespace);
 					let selectionRange: vscode.Range = new vscode.Range(
 						posStart,
 						posEnd
