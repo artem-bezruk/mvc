@@ -2,17 +2,28 @@
 import * as vscode from 'vscode';
 export function activate(context: vscode.ExtensionContext) {
 	console.log('Congratulations, your extension "LaravelRouteClassOpener" is now active!');
-	let disposable = vscode.commands.registerCommand('enableLaravelRouteClassOpener', () => {
+	let disposableC = vscode.commands.registerCommand('enableLaravelRouteClassOpener', () => {
 		vscode.window.showInformationMessage('Laravel Route Class Opener enabled!');
 	});
 	const regEx: RegExp = /'([a-zA-Z\\]+)\w+Controller(@\w+)?'/g;
-	let diss = vscode.commands.registerTextEditorCommand('extension.openPhpClassFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
+	let disposableA = vscode.commands.registerTextEditorCommand('extension.openPhpClassFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
 		let textLine: vscode.TextLine = textEditor.document.lineAt(textEditor.selection.start);
-		let str: string = textEditor.document.getText(textEditor.selection);
+		let strUri = textEditor.document.uri.path;
+		if (strUri.indexOf('routes') == -1) {
+			vscode.window.showInformationMessage('This file is not inside routes directory');
+			return;
+		}
+		if ((strUri.indexOf('web.php') != -1) || (strUri.indexOf('api.php') != -1)) {
+		} else {
+			vscode.window.showInformationMessage('This file is not web.php or api.php');
+			return;
+		}
+		if (textEditor.document.getText().indexOf('Route::') == -1) {
+			vscode.window.showInformationMessage('No route declaration found in this file');
+			return;
+		}
 		let activeEditor: vscode.TextEditor = textEditor;
 		const text: string = textLine.text;
-		const smallNumbers: vscode.DecorationOptions[] = [];
-		const largeNumbers: vscode.DecorationOptions[] = [];
 		let match;
 		while (match = regEx.exec(text)) {
 			const startPos: vscode.Position = activeEditor.document.positionAt(match.index);
@@ -21,6 +32,34 @@ export function activate(context: vscode.ExtensionContext) {
 			let strResultMatch: string = match[0];
 			parsePhpClassAndMethod(strResultMatch);
 		}
+	});
+	let disposableB = vscode.commands.registerTextEditorCommand('extension.openRoutesDeclarationFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
+		let textLine: vscode.TextLine = textEditor.document.lineAt(textEditor.selection.start);
+		vscode.window.showInformationMessage(textLine.text);
+		let activeEditor: vscode.TextEditor = textEditor;
+		const text: string = textLine.text;
+		const smallNumbers: vscode.DecorationOptions[] = [];
+		const largeNumbers: vscode.DecorationOptions[] = [];
+		let textDocument = textEditor.document;
+		let docText: string = textDocument.getText();
+		if (docText.indexOf('<?php') == 0) {
+		} else {
+			return;
+		}
+		let strNamespacePrefix: string = '';
+		let namespacePosition: number = docText.indexOf('namespace App\\Http\\Controllers' + strNamespacePrefix);
+		if (namespacePosition == -1) {
+			return;
+		}
+		let positionNamespaceStart: vscode.Position = textDocument.positionAt(namespacePosition + 'namespace App\\Http\\Controllers'.length);
+		let lineNamespace: vscode.TextLine = textDocument.lineAt(positionNamespaceStart);
+		let namespaceCommaPosition = lineNamespace.text.indexOf(';') + namespacePosition;
+		let positionNamespaceEnd: vscode.Position = textDocument.positionAt(namespaceCommaPosition);
+		let strNameSpaceShort: string = textDocument.getText(new vscode.Range(positionNamespaceStart, positionNamespaceEnd));
+		if (strNameSpaceShort.indexOf('\\') == 0) {
+			strNameSpaceShort = strNameSpaceShort.substr(1)
+		}
+		vscode.window.showInformationMessage(strNameSpaceShort);
 	});
 	function parsePhpClassAndMethod(str: string) {
 		let strFiltered: string = str.replace(/[,]/g, '');
@@ -148,8 +187,9 @@ export function activate(context: vscode.ExtensionContext) {
 		if (activeEditor && event.document === activeEditor.document) {
 		}
 	}, null, context.subscriptions);
-	context.subscriptions.push(diss);
-	context.subscriptions.push(disposable);
+	context.subscriptions.push(disposableA);
+	context.subscriptions.push(disposableB);
+	context.subscriptions.push(disposableC);
 }
 export function deactivate() {
 }
