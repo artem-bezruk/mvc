@@ -60,6 +60,13 @@ export function activate(context: vscode.ExtensionContext) {
 			strNameSpaceShort = strNameSpaceShort.substr(1)
 		}
 		vscode.window.showInformationMessage(strNameSpaceShort);
+		let strClassName = parseClassName(textDocument) 
+		let strNamespaceWithClass = strNameSpaceShort + '\\' + strClassName
+		if (strNamespaceWithClass.indexOf('\\') == 0) {
+			strNamespaceWithClass = strNamespaceWithClass.substr(1)
+		}
+		let parsedMethodName = '';
+		vscode.window.showInformationMessage("strNamespaceWithClass:" + strNamespaceWithClass + "@" + parsedMethodName);
 	});
 	function parsePhpClassAndMethod(str: string) {
 		let strFiltered: string = str.replace(/[,]/g, '');
@@ -131,6 +138,20 @@ export function activate(context: vscode.ExtensionContext) {
 				});
 			});
 		})
+	}
+	function parseClassName(textDocument: vscode.TextDocument): string {
+		let strDocument = textDocument.getText();
+		const regEx: RegExp = /class \w+Controller /g;
+		let match;
+		while (match = regEx.exec(strDocument)) {
+			const startPos: vscode.Position = textDocument.positionAt(match.index);
+			const endPos: vscode.Position = textDocument.positionAt(match.index + match[0].length);
+			let strMatch = match[0];
+			strMatch = strMatch.replace('class', '')
+			strMatch = strMatch.trim()
+			return strMatch;
+		}
+		return '';
 	}
 	console.log('Decorator sample is activated');
 	let timeout: NodeJS.Timer | undefined = undefined;
