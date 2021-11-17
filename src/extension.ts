@@ -65,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
 		if (strNamespaceWithClass.indexOf('\\') == 0) {
 			strNamespaceWithClass = strNamespaceWithClass.substr(1)
 		}
-		let parsedMethodName = '';
+		let parsedMethodName = parseMethodName(textLine);
 		vscode.window.showInformationMessage("strNamespaceWithClass:" + strNamespaceWithClass + "@" + parsedMethodName);
 	});
 	function parsePhpClassAndMethod(str: string) {
@@ -148,6 +148,20 @@ export function activate(context: vscode.ExtensionContext) {
 			const endPos: vscode.Position = textDocument.positionAt(match.index + match[0].length);
 			let strMatch = match[0];
 			strMatch = strMatch.replace('class', '')
+			strMatch = strMatch.trim()
+			return strMatch;
+		}
+		return '';
+	}
+	function parseMethodName(textLine: vscode.TextLine): string {
+		let strDocument = textLine.text;
+		const regEx: RegExp = / public function \w+\(/g;
+		let match;
+		while (match = regEx.exec(strDocument)) {
+			let strMatch = match[0]; 
+			strMatch = strMatch.replace('public', ' ')
+			strMatch = strMatch.replace('function', ' ')
+			strMatch = strMatch.replace('(', ' ')
 			strMatch = strMatch.trim()
 			return strMatch;
 		}
