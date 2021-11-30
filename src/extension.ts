@@ -6,7 +6,7 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage('Laravel Route Class Opener enabled!');
 	});
 	const regEx: RegExp = /'([a-zA-Z\\]+)\w+Controller(@\w+)?'/g;
-	let disposableA = vscode.commands.registerTextEditorCommand('extension.openPhpClassFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
+	let disposableA = vscode.commands.registerTextEditorCommand('extension.openControllerClassFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
 		let textLine: vscode.TextLine = textEditor.document.lineAt(textEditor.selection.start);
 		let strUri = textEditor.document.uri.path;
 		if (strUri.indexOf('routes') == -1) {
