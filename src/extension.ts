@@ -1,10 +1,7 @@
 'use strict';
 import * as vscode from 'vscode';
 export function activate(context: vscode.ExtensionContext) {
-	console.log('Congratulations, your extension "LaravelRouteClassOpener" is now active!');
-	let disposableC = vscode.commands.registerCommand('enableLaravelRouteClassOpener', () => {
-		vscode.window.showInformationMessage('Laravel Route Class Opener enabled!');
-	});
+	console.log('Extension "laravel-goto-controller-route" is now active!');
 	const regEx: RegExp = /'([a-zA-Z\\]+)\w+Controller(@\w+)?'/g;
 	let disposableA = vscode.commands.registerTextEditorCommand('extension.openControllerClassFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
 		let textLine: vscode.TextLine = textEditor.document.lineAt(textEditor.selection.start);
@@ -65,7 +62,6 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		let parsedMethodName = parseMethodName(textLine);
 		let strFullNamespaceWithClassWithMethod = strNamespaceWithClass + "@" + parsedMethodName;
-		vscode.window.showInformationMessage(strFullNamespaceWithClassWithMethod);
 		let filesWebRoute: Thenable<vscode.Uri[]> = vscode.workspace.findFiles('**/' + 'web.php');
 		filesWebRoute.then(handleEe)
 		let filesApiRoute: Thenable<vscode.Uri[]> = vscode.workspace.findFiles('**/' + 'api.php');
@@ -110,10 +106,11 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 	function parsePhpClassAndMethod(str: string) {
-		let strFiltered: string = str.replace(/[,]/g, '');
-		strFiltered = strFiltered.trim();
-		strFiltered = strFiltered.replace(/[\']/g, '');
-		strFiltered = strFiltered.replace(/["]/g, '');
+		let strFiltered: string = str.replace(/[,]/g, '')
+			.trim()
+			.replace(/[\']/g, '')
+			.replace(/["]/g, '')
+			.trim();
 		let strPhpNamespace: string = '';
 		let strPhpMethodName: string = '';
 		if (strFiltered.indexOf('@') == -1) {
@@ -200,10 +197,10 @@ export function activate(context: vscode.ExtensionContext) {
 		let match;
 		while (match = regEx.exec(strDocument)) {
 			let strMatch = match[0]; 
-			strMatch = strMatch.replace('public', ' ')
-			strMatch = strMatch.replace('function', ' ')
-			strMatch = strMatch.replace('(', ' ')
-			strMatch = strMatch.trim()
+			strMatch = strMatch.replace('public', '')
+				.replace('function', '')
+				.replace('(', '')
+				.trim();
 			return strMatch;
 		}
 		return '';
@@ -265,7 +262,6 @@ export function activate(context: vscode.ExtensionContext) {
 	}, null, context.subscriptions);
 	context.subscriptions.push(disposableA);
 	context.subscriptions.push(disposableB);
-	context.subscriptions.push(disposableC);
 }
 export function deactivate() {
 }
