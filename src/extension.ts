@@ -60,7 +60,24 @@ export function activate(context: vscode.ExtensionContext) {
 		if (strNamespaceWithClass.indexOf('\\') == 0) {
 			strNamespaceWithClass = strNamespaceWithClass.substr(1)
 		}
-		let parsedMethodName = parseMethodName(textLine);
+		let parsedMethodName: string = '';
+		let tempPositionCursor: vscode.Position = textEditor.selection.start;
+		let dooLoop: boolean = true;
+		while (dooLoop) {
+			if (textLine.lineNumber == 1) {
+				dooLoop = false;
+				break;
+			} else {
+				parsedMethodName = parseMethodName(textLine).trim();
+				if (parsedMethodName.length == 0) {
+					tempPositionCursor = tempPositionCursor.translate(-1);
+					textLine = textEditor.document.lineAt(tempPositionCursor);
+				} else {
+					dooLoop = false;
+					break;
+				}
+			}
+		}
 		let strFullNamespaceWithClassWithMethod = strNamespaceWithClass + "@" + parsedMethodName;
 		let filesWebRoute: Thenable<vscode.Uri[]> = vscode.workspace.findFiles('**/' + 'web.php');
 		filesWebRoute.then(handleEe)
