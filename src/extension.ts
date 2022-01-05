@@ -12,15 +12,27 @@ export function activate(context: vscode.ExtensionContext) {
 		let strUri = textEditor.document.uri.path;
 		if (strUri.indexOf('routes') == -1) {
 			vscode.window.showInformationMessage('This file is not inside routes directory');
+			try {
+				mReject(new Error('NotInsideRoutesDirectory'));
+			} catch (e) {
+			}
 			return;
 		}
 		if ((strUri.indexOf('web.php') != -1) || (strUri.indexOf('api.php') != -1)) {
 		} else {
 			vscode.window.showInformationMessage('This file is not web.php or api.php');
+			try {
+				mReject(new Error('FileIsNotWebPhpOrApiPhp'));
+			} catch (e) {
+			}
 			return;
 		}
 		if (textEditor.document.getText().indexOf('Route::') == -1) {
 			vscode.window.showInformationMessage('No route declaration found in this file');
+			try {
+				mReject(new Error('NoRouteDeclarationFound'));
+			} catch (e) {
+			}
 			return;
 		}
 		let activeEditor: vscode.TextEditor = textEditor;
@@ -140,10 +152,12 @@ export function activate(context: vscode.ExtensionContext) {
 		filesWebRoute.then(function (uris: vscode.Uri[]) {
 			handleEe(uris, strFullNamespaceWithClassWithMethod, resolve, reject, progress, token);
 		}, function () {
+			console.log('Route declaration NOT found in web.php');
 			let filesApiRoute: Thenable<vscode.Uri[]> = vscode.workspace.findFiles('**/' + 'api.php');
 			filesApiRoute.then(function (uris: vscode.Uri[]) {
 				handleEe(uris, strFullNamespaceWithClassWithMethod, resolve, reject, progress, token);
 			}, function () {
+				console.log('Route declaration NOT found in api.php');
 				reject(new Error('RouteDeclarationNotFound'));
 			});
 		});
@@ -263,6 +277,7 @@ export function activate(context: vscode.ExtensionContext) {
 					if (strPhpMethodName.length > 0) {
 						let methodPosition: number = docText.indexOf(' function ' + strPhpMethodName + '(');
 						if (methodPosition == -1) {
+							reject(new Error('MethodNameNotFound'));
 							return;
 						} else {
 							posStart = textDocument.positionAt(methodPosition + ' function '.length);
