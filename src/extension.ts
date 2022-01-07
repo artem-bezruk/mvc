@@ -57,9 +57,9 @@ export function activate(context: vscode.ExtensionContext) {
 					parsePhpClassAndMethod(strResultMatch, resolve, reject, progress, token);
 				});
 			});
-			mThenableProgress.then(function (value) {
+			mThenableProgress.then((value: string) => {
 				console.log('progress onFulfilled', value);
-			}, function (reason) {
+			}, (reason: any) => {
 				console.log('progress onRejected', reason);
 			});
 		}
@@ -83,9 +83,9 @@ export function activate(context: vscode.ExtensionContext) {
 				});
 			}
 		);
-		mThenableProgress.then(function (value) {
+		mThenableProgress.then((value: string) => {
 			console.log('progress onFulfilled', value);
-		}, function (reason) {
+		}, (reason: any) => {
 			console.log('progress onRejected', reason);
 		});
 	});
@@ -149,17 +149,16 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		let strFullNamespaceWithClassWithMethod = strNamespaceWithClass + "@" + parsedMethodName;
 		let filesWebRoute: Thenable<vscode.Uri[]> = vscode.workspace.findFiles('**/' + 'web.php');
-		filesWebRoute.then(function (uris: vscode.Uri[]) {
+		filesWebRoute.then((uris: vscode.Uri[]) => {
 			handleEe(uris, strFullNamespaceWithClassWithMethod, resolve, reject, progress, token);
-		}, function () {
-			console.log('Route declaration NOT found in web.php');
-			let filesApiRoute: Thenable<vscode.Uri[]> = vscode.workspace.findFiles('**/' + 'api.php');
-			filesApiRoute.then(function (uris: vscode.Uri[]) {
-				handleEe(uris, strFullNamespaceWithClassWithMethod, resolve, reject, progress, token);
-			}, function () {
-				console.log('Route declaration NOT found in api.php');
-				reject(new Error('RouteDeclarationNotFound'));
-			});
+		}, (reason: any) => {
+			console.log('File web.php not found', reason);
+		});
+		let filesApiRoute: Thenable<vscode.Uri[]> = vscode.workspace.findFiles('**/' + 'api.php');
+		filesApiRoute.then((uris: vscode.Uri[]) => {
+			handleEe(uris, strFullNamespaceWithClassWithMethod, resolve, reject, progress, token);
+		}, (reason: any) => {
+			console.log('File api.php not found', reason);
 		});
 	}
 	function handleEe(
