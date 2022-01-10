@@ -50,8 +50,8 @@ export function activate(context: vscode.ExtensionContext) {
 			mThenableProgress = vscode.window.withProgress({
 				location: vscode.ProgressLocation.Notification,
 				title: "Laravel: Finding controller declaration"
-			}, function (progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) {
-				return new Promise<string>(function (resolve: (value?: string) => void, reject: (reason?: any) => void) {
+			}, (progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) => {
+				return new Promise<string>((resolve: (value?: string) => void, reject: (reason?: any) => void) => {
 					mResolve = resolve;
 					mReject = reject;
 					parsePhpClassAndMethod(strResultMatch, resolve, reject, progress, token);
@@ -75,8 +75,8 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		mThenableProgress = vscode.window.withProgress(
 			progressOptions,
-			function (progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) {
-				return new Promise<string>(function (resolve: (value?: string) => void, reject: (reason?: any) => void) {
+			(progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) => {
+				return new Promise<string>((resolve: (value?: string) => void, reject: (reason?: any) => void) => {
 					mResolve = resolve;
 					mReject = reject;
 					handleTextEditorCommand(textEditor, edit, args, resolve, reject, progress, token);
@@ -148,18 +148,17 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		}
 		let strFullNamespaceWithClassWithMethod = strNamespaceWithClass + "@" + parsedMethodName;
-		let filesWebRoute: Thenable<vscode.Uri[]> = vscode.workspace.findFiles('**/' + 'web.php');
-		filesWebRoute.then((uris: vscode.Uri[]) => {
-			handleEe(uris, strFullNamespaceWithClassWithMethod, resolve, reject, progress, token);
+		Promise.all([
+			vscode.workspace.findFiles('**/' + 'webbb.php'),
+			vscode.workspace.findFiles('**/' + 'api.php')
+		]).then((value: [vscode.Uri[], vscode.Uri[]]) => {
+			let allUris: vscode.Uri[] = [];
+			allUris.push(...value[0]);
+			allUris.push(...value[1]);
+			handleEe(allUris, strFullNamespaceWithClassWithMethod, resolve, reject, progress, token);
 		}, (reason: any) => {
-			console.log('File web.php not found', reason);
-		});
-		let filesApiRoute: Thenable<vscode.Uri[]> = vscode.workspace.findFiles('**/' + 'api.php');
-		filesApiRoute.then((uris: vscode.Uri[]) => {
-			handleEe(uris, strFullNamespaceWithClassWithMethod, resolve, reject, progress, token);
-		}, (reason: any) => {
-			console.log('File api.php not found', reason);
-		});
+			console.log('File web.php or api.php not found', reason);
+		})
 	}
 	function handleEe(
 		uris: vscode.Uri[],
@@ -171,11 +170,10 @@ export function activate(context: vscode.ExtensionContext) {
 	) {
 		if (uris.length == 1) {
 		} else {
-			reject(new Error('MultipleFilesMatch'));
-			return;
 		}
 		uris.forEach((uri, i: number, uriss) => {
 			let filePath: string = uri.toString();
+			console.log('Scanning file:', filePath);
 			vscode.workspace.openTextDocument(uri).then((textDocument: vscode.TextDocument) => {
 				let docText: string = textDocument.getText();
 				if (docText.indexOf('<?php') == 0) {
@@ -206,12 +204,13 @@ export function activate(context: vscode.ExtensionContext) {
 					preview: true,
 					selection: new vscode.Range(positionStart, positionEnd),
 				};
-				setTimeout(function () {
+				setTimeout(() => {
 					progress.report({ increment: 99, message: "Done" });
 					console.log('console Done');
 					vscode.window.showTextDocument(textDocument.uri, options);
 					resolve('ResolveFindingDone');
 				}, 500);
+			}, (reason: any) => {
 			});
 		});
 	}
@@ -293,7 +292,7 @@ export function activate(context: vscode.ExtensionContext) {
 						preview: true,
 						selection: selectionRange,
 					};
-					setTimeout(function () {
+					setTimeout(() => {
 						progress.report({ increment: 99, message: "Done" });
 						console.log('console Done');
 						vscode.window.showTextDocument(textDocument.uri, options);
