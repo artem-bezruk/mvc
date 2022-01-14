@@ -8,31 +8,23 @@ export function activate(context: vscode.ExtensionContext) {
 	let mReject: (reason?: any) => void;
 	const regEx: RegExp = /'([a-zA-Z\\]+)\w+Controller(@\w+)?'/g;
 	let disposableA = vscode.commands.registerTextEditorCommand('extension.openControllerClassFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
+		try {
+			mReject(new Error('CancelProgress'));
+		} catch (e) {
+		}
 		let textLine: vscode.TextLine = textEditor.document.lineAt(textEditor.selection.start);
 		let strUri = textEditor.document.uri.path;
 		if (strUri.indexOf('routes') == -1) {
 			vscode.window.showInformationMessage('This file is not inside routes directory');
-			try {
-				mReject(new Error('NotInsideRoutesDirectory'));
-			} catch (e) {
-			}
 			return;
 		}
 		if ((strUri.indexOf('web.php') != -1) || (strUri.indexOf('api.php') != -1)) {
 		} else {
 			vscode.window.showInformationMessage('This file is not web.php or api.php');
-			try {
-				mReject(new Error('FileIsNotWebPhpOrApiPhp'));
-			} catch (e) {
-			}
 			return;
 		}
 		if (textEditor.document.getText().indexOf('Route::') == -1) {
 			vscode.window.showInformationMessage('No route declaration found in this file');
-			try {
-				mReject(new Error('NoRouteDeclarationFound'));
-			} catch (e) {
-			}
 			return;
 		}
 		let activeEditor: vscode.TextEditor = textEditor;
@@ -43,15 +35,15 @@ export function activate(context: vscode.ExtensionContext) {
 			const endPos: vscode.Position = activeEditor.document.positionAt(match.index + match[0].length);
 			const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'File **' + match[0] + '**' };
 			let strResultMatch: string = match[0];
-			try {
-				mReject(new Error('CancelProgress'));
-			} catch (e) {
-			}
 			mThenableProgress = vscode.window.withProgress({
 				location: vscode.ProgressLocation.Notification,
 				title: "Laravel: Finding controller declaration"
 			}, (progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) => {
 				return new Promise<string>((resolve: (value?: string) => void, reject: (reason?: any) => void) => {
+					try {
+						mReject(new Error('CancelProgress'));
+					} catch (e) {
+					}
 					mResolve = resolve; 
 					mReject = reject; 
 					parsePhpClassAndMethod(strResultMatch, resolve, reject, progress, token);
@@ -66,18 +58,22 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 	let disposableB = vscode.commands.registerTextEditorCommand('extension.openRoutesDeclarationFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
-		let progressOptions = {
-			location: vscode.ProgressLocation.Notification,
-			title: "Laravel: Finding route declaration"
-		};
 		try {
 			mReject(new Error('CancelProgress'));
 		} catch (e) {
 		}
+		let progressOptions = {
+			location: vscode.ProgressLocation.Notification,
+			title: "Laravel: Finding route declaration"
+		};
 		mThenableProgress = vscode.window.withProgress(
 			progressOptions,
 			(progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) => {
 				return new Promise<string>((resolve: (value?: string) => void, reject: (reason?: any) => void) => {
+					try {
+						mReject(new Error('CancelProgress'));
+					} catch (e) {
+					}
 					mResolve = resolve;
 					mReject = reject;
 					handleTextEditorCommand(textEditor, edit, args, resolve, reject, progress, token);
@@ -90,14 +86,14 @@ export function activate(context: vscode.ExtensionContext) {
 			console.log('progress onRejected', reason);
 		});
 	});
-	function handleTextEditorCommand(
+	async function handleTextEditorCommand(
 		textEditor: vscode.TextEditor,
 		edit: vscode.TextEditorEdit,
 		args: any[],
-		resolve: (value?: string) => void,
-		reject: (reason?: any) => void,
-		progress: vscode.Progress<{ message?: string; increment?: number }>,
-		token: vscode.CancellationToken
+		resolveParent: (value?: string) => void,
+		rejectParent: (reason?: any) => void,
+		progressParent: vscode.Progress<{ message?: string; increment?: number }>,
+		tokenParent: vscode.CancellationToken
 	) {
 		let textLine: vscode.TextLine = textEditor.document.lineAt(textEditor.selection.start);
 		let activeEditor: vscode.TextEditor = textEditor;
@@ -108,13 +104,13 @@ export function activate(context: vscode.ExtensionContext) {
 		let docText: string = textDocument.getText();
 		if (docText.indexOf('<?php') == 0) {
 		} else {
-			reject(new Error('NotPhpFile'));
+			rejectParent(new Error('NotPhpFile'));
 			return;
 		}
 		let strNamespacePrefix: string = '';
 		let namespacePosition: number = docText.indexOf('namespace App\\Http\\Controllers' + strNamespacePrefix);
 		if (namespacePosition == -1) {
-			reject(new Error('NamespaceNotFound'));
+			rejectParent(new Error('NamespaceNotFound'));
 			return;
 		}
 		let positionNamespaceStart: vscode.Position = textDocument.positionAt(namespacePosition + 'namespace App\\Http\\Controllers'.length);
@@ -149,71 +145,57 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		}
 		let strFullNamespaceWithClassWithMethod = strNamespaceWithClass + "@" + parsedMethodName;
-		Promise.all([
-			vscode.workspace.findFiles('**/' + 'webbb.php'),
-			vscode.workspace.findFiles('**/' + 'api.php')
-		]).then((value: [vscode.Uri[], vscode.Uri[]]) => {
-			let allUris: vscode.Uri[] = [];
-			allUris.push(...value[0]);
-			allUris.push(...value[1]);
-			handleEe(allUris, strFullNamespaceWithClassWithMethod, resolve, reject, progress, token);
-		}, (reason: any) => {
-			console.log('File web.php or api.php not found', reason);
-		})
+		let urisAll: vscode.Uri[] = [];
+		let uris1 = await vscode.workspace.findFiles('**/' + 'web.php');
+		let uris2 = await vscode.workspace.findFiles('**/' + 'api.php');
+		urisAll.push(...uris1);
+		urisAll.push(...uris2);
+		await handleEe(urisAll, strFullNamespaceWithClassWithMethod, resolveParent, rejectParent, progressParent, tokenParent);
 	}
-	function handleEe(
+	async function handleEe(
 		uris: vscode.Uri[],
 		strFullNamespaceWithClassWithMethod: string,
-		resolve: (value?: string) => void,
-		reject: (reason?: any) => void,
-		progress: vscode.Progress<{ message?: string; increment?: number }>,
-		token: vscode.CancellationToken
+		resolveParent: (value?: string) => void,
+		rejectParent: (reason?: any) => void,
+		progressParent: vscode.Progress<{ message?: string; increment?: number }>,
+		tokenParent: vscode.CancellationToken
 	) {
-		if (uris.length == 1) {
-		} else {
-		}
-		uris.forEach((uri, i: number, uriss) => {
+		for (let i = 0; i < uris.length; i++) {
+			const uri = uris[i];
 			let filePath: string = uri.toString();
 			console.log('Scanning file:', filePath);
-			vscode.workspace.openTextDocument(uri).then((textDocument: vscode.TextDocument) => {
-				let docText: string = textDocument.getText();
-				if (docText.indexOf('<?php') == 0) {
-				} else {
-					reject(new Error('NotPhpFile'));
-					return;
-				}
-				let fullStartPosition: number = docText.indexOf("'" + strFullNamespaceWithClassWithMethod + "'")
-				if (fullStartPosition == -1) {
-					reject(new Error('ClassAndMethodTextNotFound'));
-					return;
-				}
-				let fullEndPosition: number = fullStartPosition + ("'" + strFullNamespaceWithClassWithMethod + "'").length
-				if (fullEndPosition == -1) {
-					reject(new Error('EndOfMethodSymbolNotFound'));
-					return;
-				}
-				let positionStart: vscode.Position = textDocument.positionAt(fullStartPosition)
-				let positionEnd: vscode.Position = textDocument.positionAt(fullEndPosition)
-				let ee = textDocument.getText(
-					new vscode.Range(
-						positionStart, positionEnd
-					)
+			let textDocument: vscode.TextDocument = await vscode.workspace.openTextDocument(uri);
+			let docText: string = textDocument.getText();
+			if (docText.indexOf('<?php') == 0) {
+			} else {
+				continue;
+			}
+			let fullStartPosition: number = docText.indexOf("'" + strFullNamespaceWithClassWithMethod + "'")
+			if (fullStartPosition == -1) {
+				continue;
+			}
+			let fullEndPosition: number = fullStartPosition + ("'" + strFullNamespaceWithClassWithMethod + "'").length
+			if (fullEndPosition == -1) {
+				continue;
+			}
+			let positionStart: vscode.Position = textDocument.positionAt(fullStartPosition)
+			let positionEnd: vscode.Position = textDocument.positionAt(fullEndPosition)
+			let ee = textDocument.getText(
+				new vscode.Range(
+					positionStart, positionEnd
 				)
-				let options: vscode.TextDocumentShowOptions = {
-					viewColumn: undefined,
-					preserveFocus: false,
-					preview: true,
-					selection: new vscode.Range(positionStart, positionEnd),
-				};
-				setTimeout(() => {
-					progress.report({ increment: 99, message: "Done" });
-					console.log('console Done');
-					vscode.window.showTextDocument(textDocument.uri, options);
-					resolve('ResolveFindingDone');
-				}, 500);
-			}, (reason: any) => {
-			});
-		});
+			)
+			let options: vscode.TextDocumentShowOptions = {
+				viewColumn: undefined,
+				preserveFocus: false,
+				preview: true,
+				selection: new vscode.Range(positionStart, positionEnd),
+			};
+			vscode.window.showTextDocument(textDocument.uri, options);
+		}
+		progressParent.report({ increment: 99, message: "Done" });
+		console.log('console Done');
+		resolveParent('ResolveFindingDone');
 	}
 	async function parsePhpClassAndMethod(
 		str: string,
