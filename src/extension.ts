@@ -6,7 +6,6 @@ export function activate(context: vscode.ExtensionContext) {
 	let mIntervalId: NodeJS.Timeout;
 	let mResolve: (value?: string) => void;
 	let mReject: (reason?: any) => void;
-	const regEx: RegExp = /'([a-zA-Z\\]+)\w+Controller(@\w+)?'/g;
 	let disposableA = vscode.commands.registerTextEditorCommand('extension.openControllerClassFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
 		try {
 			mReject(new Error('CancelProgress'));
@@ -30,6 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
 		let activeEditor: vscode.TextEditor = textEditor;
 		const text: string = textLine.text;
 		let match;
+		const regEx: RegExp = /'([a-zA-Z\\]+)\w+Controller(@\w+)?'/g;
 		while (match = regEx.exec(text)) {
 			const startPos: vscode.Position = activeEditor.document.positionAt(match.index);
 			const endPos: vscode.Position = activeEditor.document.positionAt(match.index + match[0].length);
@@ -333,6 +333,7 @@ export function activate(context: vscode.ExtensionContext) {
 		const smallNumbers: vscode.DecorationOptions[] = [];
 		const largeNumbers: vscode.DecorationOptions[] = [];
 		let match;
+		const regEx: RegExp = /'([a-zA-Z\\]+)\w+Controller(@\w+)?'/g;
 		while (match = regEx.exec(text)) {
 			const startPos: vscode.Position = activeEditor.document.positionAt(match.index);
 			const endPos: vscode.Position = activeEditor.document.positionAt(match.index + match[0].length);
