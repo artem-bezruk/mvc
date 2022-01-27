@@ -181,9 +181,7 @@ export function activate(context: vscode.ExtensionContext) {
 			let positionStart: vscode.Position = textDocument.positionAt(fullStartPosition)
 			let positionEnd: vscode.Position = textDocument.positionAt(fullEndPosition)
 			let ee = textDocument.getText(
-				new vscode.Range(
-					positionStart, positionEnd
-				)
+				new vscode.Range(positionStart, positionEnd)
 			)
 			let options: vscode.TextDocumentShowOptions = {
 				viewColumn: undefined,
@@ -261,15 +259,11 @@ export function activate(context: vscode.ExtensionContext) {
 					posEnd = textDocument.positionAt(' function '.length + methodPosition + strPhpMethodName.length);
 				}
 			}
-			let selectionRange: vscode.Range = new vscode.Range(
-				posStart,
-				posEnd
-			);
 			let options: vscode.TextDocumentShowOptions = {
 				viewColumn: undefined,
 				preserveFocus: false,
 				preview: true,
-				selection: selectionRange,
+				selection: new vscode.Range(posStart, posStart),
 			};
 			vscode.window.showTextDocument(textDocument.uri, options);
 		}
