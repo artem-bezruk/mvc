@@ -178,8 +178,8 @@ export function activate(context: vscode.ExtensionContext) {
 			if (fullEndPosition == -1) {
 				continue;
 			}
-			let positionStart: vscode.Position = textDocument.positionAt(fullStartPosition)
-			let positionEnd: vscode.Position = textDocument.positionAt(fullEndPosition)
+			let positionStart: vscode.Position = textDocument.positionAt(fullStartPosition + 1)
+			let positionEnd: vscode.Position = textDocument.positionAt(fullEndPosition - 1)
 			let ee = textDocument.getText(
 				new vscode.Range(positionStart, positionEnd)
 			)
