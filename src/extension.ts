@@ -11,51 +11,54 @@ export function activate(context: vscode.ExtensionContext) {
 			mReject(new Error('CancelProgress'));
 		} catch (e) {
 		}
-		let textLine: vscode.TextLine = textEditor.document.lineAt(textEditor.selection.start);
-		let strUri = textEditor.document.uri.path;
-		if (strUri.indexOf('routes') == -1) {
-			vscode.window.showInformationMessage('This file is not inside routes directory');
-			return;
-		}
-		if ((strUri.indexOf('web.php') != -1) || (strUri.indexOf('api.php') != -1)) {
-		} else {
-			vscode.window.showInformationMessage('This file is not web.php or api.php');
-			return;
-		}
-		if (textEditor.document.getText().indexOf('Route::') == -1) {
-			vscode.window.showInformationMessage('No route declaration found in this file');
-			return;
-		}
-		let activeEditor: vscode.TextEditor = textEditor;
-		const text: string = textLine.text;
-		let match;
-		const regEx: RegExp = /'([a-zA-Z\\]+)\w+Controller(@\w+)?'/g;
-		while (match = regEx.exec(text)) {
-			const startPos: vscode.Position = activeEditor.document.positionAt(match.index);
-			const endPos: vscode.Position = activeEditor.document.positionAt(match.index + match[0].length);
-			const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'File **' + match[0] + '**' };
-			let strResultMatch: string = match[0];
-			mThenableProgress = vscode.window.withProgress({
-				location: vscode.ProgressLocation.Notification,
-				title: "Laravel: Finding controller declaration"
-			}, (progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) => {
-				return new Promise<string>((resolve: (value?: string) => void, reject: (reason?: any) => void) => {
-					try {
-						mReject(new Error('CancelProgress'));
-					} catch (e) {
-					}
-					mResolve = resolve; 
-					mReject = reject; 
-					parsePhpClassAndMethod(strResultMatch, resolve, reject, progress, token);
-				});
+		mThenableProgress = vscode.window.withProgress({
+			location: vscode.ProgressLocation.Notification,
+			title: "Laravel: Finding controller declaration"
+		}, (progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) => {
+			return new Promise<string>(async (resolve: (value?: string) => void, reject: (reason?: any) => void) => {
+				try {
+					mReject(new Error('CancelProgress'));
+				} catch (e) {
+				}
+				mResolve = resolve; 
+				mReject = reject; 
+				let textLine: vscode.TextLine = textEditor.document.lineAt(textEditor.selection.start);
+				let strUri = textEditor.document.uri.path;
+				if (strUri.indexOf('routes') == -1) {
+					vscode.window.showInformationMessage('This file is not inside routes directory');
+					reject(new Error('NotInsideRoutesDirectory'));
+					return;
+				}
+				if ((strUri.indexOf('web.php') != -1) || (strUri.indexOf('api.php') != -1)) {
+				} else {
+					vscode.window.showInformationMessage('This file is not web.php or api.php');
+					reject(new Error('NotWebPhpOrApiPhp'));
+					return;
+				}
+				if (textEditor.document.getText().indexOf('Route::') == -1) {
+					vscode.window.showInformationMessage('No route declaration found in this file');
+					reject(new Error('NoRouteDeclarationFound'));
+					return;
+				}
+				let activeEditor: vscode.TextEditor = textEditor;
+				const text: string = textLine.text;
+				let match;
+				const regEx: RegExp = /'([a-zA-Z\\]+)\w+Controller(@\w+)?'/g;
+				while (match = regEx.exec(text)) {
+					const startPos: vscode.Position = activeEditor.document.positionAt(match.index);
+					const endPos: vscode.Position = activeEditor.document.positionAt(match.index + match[0].length);
+					const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'File **' + match[0] + '**' };
+					let strResultMatch: string = match[0];
+					await parsePhpClassAndMethod(strResultMatch, resolve, reject, progress, token);
+					break;
+				}
 			});
-			mThenableProgress.then((value: string) => {
-				console.log('progress onFulfilled', value);
-			}, (reason: any) => {
-				console.log('progress onRejected', reason);
-			});
-			break; 
-		}
+		});
+		mThenableProgress.then((value: string) => {
+			console.log('progress onFulfilled', value);
+		}, (reason: any) => {
+			console.log('progress onRejected', reason);
+		});
 	});
 	let disposableB = vscode.commands.registerTextEditorCommand('extension.openRoutesDeclarationFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
 		try {
