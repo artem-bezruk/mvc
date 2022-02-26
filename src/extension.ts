@@ -15,7 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
 			location: vscode.ProgressLocation.Notification,
 			title: "Laravel: Finding controller declaration"
 		}, (progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) => {
-			return new Promise<string>(async (resolve: (value?: string) => void, reject: (reason?: any) => void) => {
+			return new Promise<string>((resolve: (value?: string) => void, reject: (reason?: any) => void) => {
 				try {
 					mReject(new Error('CancelProgress'));
 				} catch (e) {
@@ -49,7 +49,7 @@ export function activate(context: vscode.ExtensionContext) {
 					const endPos: vscode.Position = activeEditor.document.positionAt(match.index + match[0].length);
 					const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'File **' + match[0] + '**' };
 					let strResultMatch: string = match[0];
-					await parsePhpClassAndMethod(strResultMatch, resolve, reject, progress, token);
+					parsePhpClassAndMethod(strResultMatch, resolve, reject, progress, token);
 					break;
 				}
 			});
@@ -72,14 +72,14 @@ export function activate(context: vscode.ExtensionContext) {
 		mThenableProgress = vscode.window.withProgress(
 			progressOptions,
 			(progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) => {
-				return new Promise<string>(async (resolve: (value?: string) => void, reject: (reason?: any) => void) => {
+				return new Promise<string>((resolve: (value?: string) => void, reject: (reason?: any) => void) => {
 					try {
 						mReject(new Error('CancelProgress'));
 					} catch (e) {
 					}
 					mResolve = resolve;
 					mReject = reject;
-					await handleTextEditorCommand(textEditor, edit, args, resolve, reject, progress, token);
+					handleTextEditorCommand(textEditor, edit, args, resolve, reject, progress, token);
 				});
 			}
 		);
