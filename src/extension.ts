@@ -49,7 +49,13 @@ export function activate(context: vscode.ExtensionContext) {
 					const endPos: vscode.Position = activeEditor.document.positionAt(match.index + match[0].length);
 					const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'File **' + match[0] + '**' };
 					let strResultMatch: string = match[0];
-					parsePhpClassAndMethod(strResultMatch, resolve, reject, progress, token);
+					parsePhpClassAndMethod(strResultMatch, resolve, reject, progress, token)
+						.then(() => {
+						})
+						.catch(() => {
+						})
+						.finally(() => {
+						});;
 					break;
 				}
 			});
@@ -79,7 +85,13 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 					mResolve = resolve;
 					mReject = reject;
-					handleTextEditorCommand(textEditor, edit, args, resolve, reject, progress, token);
+					handleTextEditorCommand(textEditor, edit, args, resolve, reject, progress, token)
+						.then(() => {
+						})
+						.catch(() => {
+						})
+						.finally(() => {
+						});
 				});
 			}
 		);
