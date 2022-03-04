@@ -52,7 +52,11 @@ export function activate(context: vscode.ExtensionContext) {
 					parsePhpClassAndMethod(strResultMatch, resolve, reject, progress, token)
 						.then(() => {
 						})
-						.catch(() => {
+						.catch((reason: any) => {
+							try {
+								mReject(reason);
+							} catch (e) {
+							}
 						})
 						.finally(() => {
 						});;
@@ -88,7 +92,11 @@ export function activate(context: vscode.ExtensionContext) {
 					handleTextEditorCommand(textEditor, edit, args, resolve, reject, progress, token)
 						.then(() => {
 						})
-						.catch(() => {
+						.catch((reason: any) => {
+							try {
+								mReject(reason);
+							} catch (e) {
+							}
 						})
 						.finally(() => {
 						});
