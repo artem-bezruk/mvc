@@ -193,24 +193,21 @@ export function activate(context: vscode.ExtensionContext) {
 			} else {
 				continue;
 			}
-			let fullStartPosition: number = docText.indexOf("'" + strFullNamespaceWithClassWithMethod + "'")
+			let fullStartPosition: number = docText.indexOf("'" + strFullNamespaceWithClassWithMethod + "'");
 			if (fullStartPosition == -1) {
 				continue;
 			}
-			let fullEndPosition: number = fullStartPosition + ("'" + strFullNamespaceWithClassWithMethod + "'").length
-			if (fullEndPosition == -1) {
-				continue;
-			}
-			let positionStart: vscode.Position = textDocument.positionAt(fullStartPosition + 1)
-			let positionEnd: vscode.Position = textDocument.positionAt(fullEndPosition - 1)
+			let fullEndPosition: number = fullStartPosition + (("'" + strFullNamespaceWithClassWithMethod + "'").length);
+			let positionStart: vscode.Position = textDocument.positionAt(fullStartPosition + 1);
+			let positionEnd: vscode.Position = textDocument.positionAt(fullEndPosition - 1);
 			let ee = textDocument.getText(
 				new vscode.Range(positionStart, positionEnd)
-			)
+			);
 			let options: vscode.TextDocumentShowOptions = {
 				viewColumn: undefined,
 				preserveFocus: false,
 				preview: true,
-				selection: new vscode.Range(positionStart, positionEnd),
+				selection: new vscode.Range(positionStart, positionEnd)
 			};
 			vscode.window.showTextDocument(textDocument.uri, options);
 		}
