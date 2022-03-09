@@ -175,6 +175,11 @@ export function activate(context: vscode.ExtensionContext) {
 		urisAll.push(...uris2);
 		await handleEe(urisAll, strFullNamespaceWithClassWithMethod, resolveParent, rejectParent, progressParent, tokenParent);
 	}
+	interface MyResult {
+		uri: vscode.Uri;
+		positionStart: vscode.Position;
+		positionEnd: vscode.Position;
+	}
 	async function handleEe(
 		uris: vscode.Uri[],
 		strFullNamespaceWithClassWithMethod: string,
@@ -183,6 +188,7 @@ export function activate(context: vscode.ExtensionContext) {
 		progressParent: vscode.Progress<{ message?: string; increment?: number }>,
 		tokenParent: vscode.CancellationToken
 	) {
+		let arrResult: MyResult[] = [];
 		for (let i = 0; i < uris.length; i++) {
 			const uri = uris[i];
 			let filePath: string = uri.toString();
@@ -203,6 +209,11 @@ export function activate(context: vscode.ExtensionContext) {
 			let ee = textDocument.getText(
 				new vscode.Range(positionStart, positionEnd)
 			);
+			arrResult.push({
+				uri: textDocument.uri,
+				positionStart: positionStart,
+				positionEnd: positionEnd
+			});
 			let options: vscode.TextDocumentShowOptions = {
 				viewColumn: undefined,
 				preserveFocus: false,
@@ -211,6 +222,7 @@ export function activate(context: vscode.ExtensionContext) {
 			};
 			vscode.window.showTextDocument(textDocument.uri, options);
 		}
+		console.log(arrResult);
 		progressParent.report({ increment: 99, message: "Done" });
 		console.log('console Done');
 		resolveParent('ResolveFindingDone');
@@ -238,6 +250,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		let arrStrPhpNamespace: string[] = strPhpNamespace.split('\\'); 
 		let strFilenamePrefix: string = arrStrPhpNamespace[arrStrPhpNamespace.length - 1]; 
+		let arrResult: MyResult[] = [];
 		let uris: vscode.Uri[] = await vscode.workspace.findFiles('**/' + strFilenamePrefix + '.php');
 		for (let i = 0; i < uris.length; i++) {
 			const uri = uris[i];
@@ -279,13 +292,53 @@ export function activate(context: vscode.ExtensionContext) {
 					posEnd = textDocument.positionAt(' function '.length + methodPosition + strPhpMethodName.length);
 				}
 			}
-			let options: vscode.TextDocumentShowOptions = {
-				viewColumn: undefined,
-				preserveFocus: false,
-				preview: true,
-				selection: new vscode.Range(posStart, posStart),
-			};
-			vscode.window.showTextDocument(textDocument.uri, options);
+			arrResult.push({
+				uri: textDocument.uri,
+				positionStart: posStart,
+				positionEnd: posStart
+			});
+		}
+		if (arrResult.length == 1) {
+			for (let i = 0; i < arrResult.length; i++) {
+				const rec: MyResult = arrResult[i];
+				let showOptions: vscode.TextDocumentShowOptions = {
+					viewColumn: undefined,
+					preserveFocus: false,
+					preview: true,
+					selection: new vscode.Range(rec.positionStart, rec.positionEnd),
+				};
+				vscode.window.showTextDocument(rec.uri, showOptions);
+				break;
+			}
+		} else if (arrResult.length > 1) {
+			let arrStrPath: string[] = [];
+			for (let x = 0; x < arrResult.length; x++) {
+				const rec = arrResult[x];
+				arrStrPath.push(rec.uri.path);
+			}
+			vscode.window.showQuickPick(
+				arrStrPath,
+				{
+					ignoreFocusOut: true,
+					canPickMany: false,
+				}
+			).then((value: string | undefined) => {
+				for (let i = 0; i < arrResult.length; i++) {
+					const rec: MyResult = arrResult[i];
+					if (value === rec.uri.path) {
+						let showOptions: vscode.TextDocumentShowOptions = {
+							viewColumn: undefined,
+							preserveFocus: false,
+							preview: true,
+							selection: new vscode.Range(rec.positionStart, rec.positionEnd),
+						};
+						vscode.window.showTextDocument(rec.uri, showOptions);
+						break;
+					}
+				}
+			}, (reason: any) => {
+				console.log('onrejected:', reason);
+			});
 		}
 		progressParent.report({ increment: 99, message: "Done" });
 		console.log('console Done');
