@@ -42,6 +42,7 @@ export function activate(context: vscode.ExtensionContext) {
                 }
                 let activeEditor: vscode.TextEditor = textEditor;
                 const text: string = textLine.text;
+                let isFound = false;
                 let match;
                 const regEx: RegExp = /'([a-zA-Z\\]+)\w+Controller(@\w+)?'/g;
                 while (match = regEx.exec(text)) {
@@ -60,7 +61,11 @@ export function activate(context: vscode.ExtensionContext) {
                         })
                         .finally(() => {
                         });;
+                    isFound = true;
                     break;
+                }
+                if (!isFound) {
+                    reject(new Error('NoMatch'));
                 }
             });
         });
