@@ -174,8 +174,8 @@ export function activate(context: vscode.ExtensionContext) {
         }
         let strFullNamespaceWithClassWithMethod = strNamespaceWithClass + "@" + parsedMethodName;
         let urisAll: vscode.Uri[] = [];
-        let uris1 = await vscode.workspace.findFiles('**/' + 'web.php');
-        let uris2 = await vscode.workspace.findFiles('**/' + 'api.php');
+        let uris1 = await vscode.workspace.findFiles('routes/web.php', 'vendor,node_modules');
+        let uris2 = await vscode.workspace.findFiles('routes/api.php', 'vendor,node_modules');
         urisAll.push(...uris1);
         urisAll.push(...uris2);
         await handleEe(urisAll, strFullNamespaceWithClassWithMethod, resolveParent, rejectParent, progressParent, tokenParent);
@@ -307,7 +307,7 @@ export function activate(context: vscode.ExtensionContext) {
         let arrStrPhpNamespace: string[] = strPhpNamespace.split('\\'); 
         let strFilenamePrefix: string = arrStrPhpNamespace[arrStrPhpNamespace.length - 1]; 
         let arrResult: MyResult[] = [];
-        let uris: vscode.Uri[] = await vscode.workspace.findFiles('**/' + strFilenamePrefix + '.php');
+        let uris: vscode.Uri[] = await vscode.workspace.findFiles('app' + strFilenamePrefix + '.php', 'vendor,node_modules');
         for (let i = 0; i < uris.length; i++) {
             const uri = uris[i];
             let filePath: string = uri.toString();
