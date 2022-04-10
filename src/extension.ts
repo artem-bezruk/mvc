@@ -1,11 +1,12 @@
 "use strict";
 import * as vscode from 'vscode';
+let mThenableProgress;
+let mIntervalId: NodeJS.Timeout;
+let mResolve: (value?: string) => void;
+let mReject: (reason?: any) => void;
+let mStatusBarItem: vscode.StatusBarItem;
 export function activate(context: vscode.ExtensionContext) {
-    console.log('Extension "laravel-goto-controller-route" is now active!');
-    let mThenableProgress;
-    let mIntervalId: NodeJS.Timeout;
-    let mResolve: (value?: string) => void;
-    let mReject: (reason?: any) => void;
+    console.log('Extension "goto-route-controller-laravel" activate');
     let disposableA = vscode.commands.registerTextEditorCommand('extension.openControllerClassFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
         try {
             mReject(new Error('CancelProgress'));
@@ -168,16 +169,16 @@ export function activate(context: vscode.ExtensionContext) {
                 console.log(strr); 
                 let strToFind: string = "view('" + strr + "'";
                 handleFindBladeUsage(strToFind, textEditor, edit, args, resolve, reject, progress, token)
-                        .then(() => {
-                        })
-                        .catch((reason: any) => {
-                            try {
-                                mReject(reason);
-                            } catch (e) {
-                            }
-                        })
-                        .finally(() => {
-                        });
+                    .then(() => {
+                    })
+                    .catch((reason: any) => {
+                        try {
+                            mReject(reason);
+                        } catch (e) {
+                        }
+                    })
+                    .finally(() => {
+                    });
             });
         });
         mThenableProgress.then((value: string) => {
@@ -374,12 +375,87 @@ export function activate(context: vscode.ExtensionContext) {
         if (activeEditor && event.document === activeEditor.document) {
         }
     }, null, context.subscriptions);
+    mStatusBarItem = vscode.window.createStatusBarItem(
+        vscode.StatusBarAlignment.Right, 100
+    );
+    context.subscriptions.push(mStatusBarItem);
+    mStatusBarItem.hide(); 
     context.subscriptions.push(disposableA);
     context.subscriptions.push(disposableB);
     context.subscriptions.push(disposableC);
-    function sleep(ms: number) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
+    context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(function () {
+        updateUiStatusBar();
+    }));
+    context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(function () {
+        updateUiStatusBar();
+    }));
+    updateUiStatusBar();
 }
 export function deactivate() {
+    console.log('Extension "goto-route-controller-laravel" deactivate');
+}
+function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+function updateUiStatusBar() {
+    let textEditor = vscode.window.activeTextEditor;
+    if (textEditor === undefined) {
+        return;
+    }
+    let textLine: vscode.TextLine = textEditor.document.lineAt(textEditor.selection.start);
+    mStatusBarItem.hide();
+    mStatusBarItem.command = '';
+    mStatusBarItem.text = '';
+    if (isBladeFile(textEditor)) {
+        mStatusBarItem.command = 'extension.findBladeUsage';
+        mStatusBarItem.text = 'EP-Controller';
+        mStatusBarItem.show();
+    } else if (isControllerFile(textEditor)) {
+        mStatusBarItem.command = 'extension.openRoutesDeclarationFile';
+        mStatusBarItem.text = 'EP-Route';
+        mStatusBarItem.show();
+    } else if (isRouteFile(textEditor)) {
+        mStatusBarItem.command = 'extension.openControllerClassFile';
+        mStatusBarItem.text = 'EP-Controller';
+        mStatusBarItem.show();
+    }
+}
+function isControllerFile(textEditor: vscode.TextEditor): Boolean {
+    let docText = textEditor.document.getText();
+    let namespacePosition: number = docText.indexOf('namespace App\\Http\\Controllers');
+    if (namespacePosition === -1) {
+        return false;
+    }
+    return true;
+}
+function isBladeFile(textEditor: vscode.TextEditor): Boolean {
+    let strUri = textEditor.document.uri.path;
+    if (strUri.indexOf('resources') === -1 || strUri.indexOf('views') === -1) {
+        return false;
+    }
+    if ((strUri.indexOf('.blade.php') !== -1)) {
+    } else {
+        return false;
+    }
+    let strFiltered: string = strUri.replace('.blade.php', '')
+        .trim();
+    let indexStrResources = strFiltered.indexOf('resources');
+    let strr = strFiltered.substr(indexStrResources);
+    if (strr.indexOf('resources') === -1 || strr.indexOf('views') === -1) {
+        return false;
+    }
+    let indexStrViews = strr.indexOf('views');
+    strr = strr.substr(indexStrViews + 'views'.length + 1); 
+    strr = strr.trim();
+    if (strr) {
+        return true;
+    }
+    return false;
+}
+function isRouteFile(textEditor: vscode.TextEditor): Boolean {
+    let strUri = textEditor.document.uri.path;
+    if ((strUri.indexOf('web.php') !== -1) || (strUri.indexOf('api.php') !== -1)) {
+        return true;
+    }
+    return false;
 }
