@@ -408,15 +408,18 @@ function updateUiStatusBar() {
     mStatusBarItem.text = '';
     if (isBladeFile(textEditor)) {
         mStatusBarItem.command = 'extension.findBladeUsage';
-        mStatusBarItem.text = 'EP-Controller';
+        mStatusBarItem.text = 'EP-findController';
+        mStatusBarItem.tooltip = "Find controller";
         mStatusBarItem.show();
     } else if (isControllerFile(textEditor)) {
         mStatusBarItem.command = 'extension.openRoutesDeclarationFile';
-        mStatusBarItem.text = 'EP-Route';
+        mStatusBarItem.text = 'EP-findRoute';
+        mStatusBarItem.tooltip = "Find route";
         mStatusBarItem.show();
     } else if (isRouteFile(textEditor)) {
         mStatusBarItem.command = 'extension.openControllerClassFile';
-        mStatusBarItem.text = 'EP-Controller';
+        mStatusBarItem.text = 'EP-findController';
+        mStatusBarItem.tooltip = "Find controller";
         mStatusBarItem.show();
     }
 }
