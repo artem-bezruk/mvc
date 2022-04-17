@@ -408,8 +408,8 @@ function updateUiStatusBar() {
     mStatusBarItem.text = '';
     if (isBladeFile(textEditor)) {
         mStatusBarItem.command = 'extension.findBladeUsage';
-        mStatusBarItem.text = 'EP-findController';
-        mStatusBarItem.tooltip = "Find controller";
+        mStatusBarItem.text = 'EP-findBladeUsage';
+        mStatusBarItem.tooltip = "Find blade usage";
         mStatusBarItem.show();
     } else if (isControllerFile(textEditor)) {
         mStatusBarItem.command = 'extension.openRoutesDeclarationFile';
