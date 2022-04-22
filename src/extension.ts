@@ -162,11 +162,9 @@ export function activate(context: vscode.ExtensionContext) {
                     reject(new Error('NoUsageFound'));
                     return;
                 }
-                console.log('Horray! File is valid.');
                 strr = strr.replace(/[\\]/g, '.')
                     .replace(/[/]/g, '.')
                     .trim();
-                console.log(strr); 
                 let strToFind: string = "view('" + strr + "'";
                 handleFindBladeUsage(strToFind, textEditor, edit, args, resolve, reject, progress, token)
                     .then(() => {
