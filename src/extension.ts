@@ -5,6 +5,29 @@ let mIntervalId: NodeJS.Timeout;
 let mResolve: (value?: string) => void;
 let mReject: (reason?: any) => void;
 let mStatusBarItem: vscode.StatusBarItem;
+function routeFilterStr(strInput: string): string {
+    let offset = strInput.indexOf("Route::", 0);
+    if (offset === -1) {
+        return "";
+    }
+    offset = strInput.indexOf("(", offset);
+    if (offset === -1) {
+        return "";
+    }
+    offset = strInput.indexOf("'", offset);
+    if (offset === -1) {
+        return "";
+    }
+    offset = strInput.indexOf("'", offset);
+    if (offset === -1) {
+        return "";
+    }
+    offset = strInput.indexOf(",", offset);
+    if (offset === -1) {
+        return "";
+    }
+    return strInput.substr(offset);
+}
 export function activate(context: vscode.ExtensionContext) {
     console.log('Extension "goto-route-controller-laravel" activate');
     let disposableA = vscode.commands.registerTextEditorCommand('extension.openControllerClassFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
@@ -45,8 +68,8 @@ export function activate(context: vscode.ExtensionContext) {
                 const text: string = textLine.text;
                 let isFound = false;
                 let match;
-                const regEx: RegExp = /'([a-zA-Z\\]+)\w+Controller(@\w+)?'/g;
-                while (match = regEx.exec(text)) {
+                const regEx: RegExp = /'([a-zA-Z\\]+)\w+[a-zA-Z0-9](@\w+)?'/g;
+                while (match = regEx.exec(routeFilterStr(text))) {
                     const startPos: vscode.Position = activeEditor.document.positionAt(match.index);
                     const endPos: vscode.Position = activeEditor.document.positionAt(match.index + match[0].length);
                     const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'File **' + match[0] + '**' };
@@ -291,7 +314,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
     function parseClassName(textDocument: vscode.TextDocument): string {
         let strDocument = textDocument.getText();
-        const regEx: RegExp = /class \w+Controller /g;
+        const regEx: RegExp = /class \w+/g;
         let match;
         while (match = regEx.exec(strDocument)) {
             const startPos: vscode.Position = textDocument.positionAt(match.index);
