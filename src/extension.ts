@@ -1,43 +1,26 @@
 "use strict";
 import * as vscode from 'vscode';
+const TAG = 'EP:';
 let mThenableProgress;
 let mIntervalId: NodeJS.Timeout;
 let mResolve: (value?: string) => void;
 let mReject: (reason?: any) => void;
 let mStatusBarItem: vscode.StatusBarItem;
-function routeFilterStr(strInput: string): string {
-    let offset = strInput.indexOf("Route::", 0);
-    if (offset === -1) {
-        return "";
-    }
-    offset = strInput.indexOf("(", offset);
-    if (offset === -1) {
-        return "";
-    }
-    offset = strInput.indexOf("'", offset);
-    if (offset === -1) {
-        return "";
-    }
-    offset = strInput.indexOf("'", offset);
-    if (offset === -1) {
-        return "";
-    }
-    offset = strInput.indexOf(",", offset);
-    if (offset === -1) {
-        return "";
-    }
-    return strInput.substr(offset);
+interface MyResult {
+    uri: vscode.Uri;
+    positionStart: vscode.Position;
+    positionEnd: vscode.Position;
 }
 export function activate(context: vscode.ExtensionContext) {
-    console.log('Extension "goto-route-controller-laravel" activate');
-    let disposableA = vscode.commands.registerTextEditorCommand('extension.openControllerClassFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
+    console.log(TAG, 'Extension "goto-route-controller-laravel" activate');
+    let disposableRouteToController = vscode.commands.registerTextEditorCommand('extension.openControllerClassFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
         try {
             mReject(new Error('CancelProgress'));
         } catch (e) {
         }
         mThenableProgress = vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: "EP: Finding controller declaration"
+            title: 'EP: Finding controller declaration'
         }, (progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) => {
             return new Promise<string>((resolve: (value?: string) => void, reject: (reason?: any) => void) => {
                 try {
@@ -68,13 +51,13 @@ export function activate(context: vscode.ExtensionContext) {
                 const text: string = textLine.text;
                 let isFound = false;
                 let match;
-                const regEx: RegExp = /'([a-zA-Z\\]+)\w+[a-zA-Z0-9](@\w+)?'/g;
+                const regEx: RegExp = /'([a-zA-Z\\]+)\w+(@\w+)?'/g;
                 while (match = regEx.exec(routeFilterStr(text))) {
                     const startPos: vscode.Position = activeEditor.document.positionAt(match.index);
                     const endPos: vscode.Position = activeEditor.document.positionAt(match.index + match[0].length);
                     const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'File **' + match[0] + '**' };
                     let strResultMatch: string = match[0];
-                    parsePhpClassAndMethod(strResultMatch, resolve, reject, progress, token)
+                    handleRouteToController(strResultMatch, resolve, reject, progress, token)
                         .then(() => {
                         })
                         .catch((reason: any) => {
@@ -94,19 +77,19 @@ export function activate(context: vscode.ExtensionContext) {
             });
         });
         mThenableProgress.then((value: string) => {
-            console.log('progress onFulfilled', value);
+            console.log(TAG, 'progress onFulfilled', value);
         }, (reason: any) => {
-            console.log('progress onRejected', reason);
+            console.log(TAG, 'progress onRejected', reason);
         });
     });
-    let disposableB = vscode.commands.registerTextEditorCommand('extension.openRoutesDeclarationFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
+    let disposableControllerToRoute = vscode.commands.registerTextEditorCommand('extension.openRoutesDeclarationFile', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
         try {
             mReject(new Error('CancelProgress'));
         } catch (e) {
         }
         let progressOptions = {
             location: vscode.ProgressLocation.Notification,
-            title: "EP: Finding route declaration"
+            title: 'EP: Finding route declaration'
         };
         mThenableProgress = vscode.window.withProgress(
             progressOptions,
@@ -118,7 +101,7 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                     mResolve = resolve;
                     mReject = reject;
-                    handleTextEditorCommand(textEditor, edit, args, resolve, reject, progress, token)
+                    handleControllerToRoute(textEditor, edit, args, resolve, reject, progress, token)
                         .then(() => {
                         })
                         .catch((reason: any) => {
@@ -133,19 +116,19 @@ export function activate(context: vscode.ExtensionContext) {
             }
         );
         mThenableProgress.then((value: string) => {
-            console.log('progress onFulfilled', value);
+            console.log(TAG, 'progress onFulfilled', value);
         }, (reason: any) => {
-            console.log('progress onRejected', reason);
+            console.log(TAG, 'progress onRejected', reason);
         });
     });
-    let disposableC = vscode.commands.registerTextEditorCommand('extension.findBladeUsage', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
+    let disposableFindBladeUsage = vscode.commands.registerTextEditorCommand('extension.findBladeUsage', (textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit, args: any[]) => {
         try {
             mReject(new Error('CancelProgress'));
         } catch (e) {
         }
         mThenableProgress = vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: "EP: Finding blade usage"
+            title: 'EP: Finding blade usage'
         }, (progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) => {
             return new Promise<string>((resolve: (value?: string) => void, reject: (reason?: any) => void) => {
                 try {
@@ -188,7 +171,7 @@ export function activate(context: vscode.ExtensionContext) {
                 strr = strr.replace(/[\\]/g, '.')
                     .replace(/[/]/g, '.')
                     .trim();
-                let strToFind: string = "view('" + strr + "'";
+                let strToFind: string = "view('" + strr + "'"; 
                 handleFindBladeUsage(strToFind, textEditor, edit, args, resolve, reject, progress, token)
                     .then(() => {
                     })
@@ -203,143 +186,11 @@ export function activate(context: vscode.ExtensionContext) {
             });
         });
         mThenableProgress.then((value: string) => {
-            console.log('progress onFulfilled', value);
+            console.log(TAG, 'progress onFulfilled', value);
         }, (reason: any) => {
-            console.log('progress onRejected', reason);
+            console.log(TAG, 'progress onRejected', reason);
         });
     });
-    async function handleFindBladeUsage(
-        strToFind: string,
-        textEditor: vscode.TextEditor,
-        edit: vscode.TextEditorEdit,
-        args: any[],
-        resolveParent: (value?: string) => void,
-        rejectParent: (reason?: any) => void,
-        progressParent: vscode.Progress<{ message?: string; increment?: number }>,
-        tokenParent: vscode.CancellationToken
-    ) {
-        let urisAll: vscode.Uri[] = [];
-        let uris1 = await vscode.workspace.findFiles('**vendor' + strFilenamePrefix + '.php', 'vendor,node_modules');
-        for (let i = 0; i < uris.length; i++) {
-            const uri = uris[i];
-            let filePath: string = uri.toString();
-            console.log('Scanning file:', filePath);
-            let textDocument: vscode.TextDocument = await vscode.workspace.openTextDocument(uri);
-            let docText: string = textDocument.getText();
-            if (docText.indexOf('<?php') === 0) {
-            } else {
-                continue;
-            }
-            let strNamespacePrefix: string = '';
-            let namespacePosition: number = docText.indexOf('namespace App\\Http\\Controllers' + strNamespacePrefix);
-            if (namespacePosition === -1) {
-                continue;
-            }
-            let arrNamespaceWithoutClassName = arrStrPhpNamespace.slice(0, -1); 
-            let strExtraSeparator: string = '\\';
-            if (arrStrPhpNamespace.length === 1) {
-                strExtraSeparator = ''; 
-            }
-            let strFullNamespace = 'namespace App\\Http\\Controllers' + strExtraSeparator + arrNamespaceWithoutClassName.join('\\') + ';';
-            let exactNamespacePosition: number = docText.indexOf(strFullNamespace);
-            if (exactNamespacePosition === -1) {
-                continue;
-            }
-            let classNamePosition: number = docText.indexOf('class ' + strFilenamePrefix + ' ');
-            if (classNamePosition === -1) {
-                continue;
-            }
-            let posStart: vscode.Position = textDocument.positionAt(classNamePosition + 'class '.length);
-            let posEnd: vscode.Position = textDocument.positionAt('class '.length + classNamePosition + strPhpMethodName.length);
-            if (strPhpMethodName.length > 0) {
-                let methodPosition: number = docText.indexOf(' function ' + strPhpMethodName + '(');
-                if (methodPosition === -1) {
-                    continue;
-                } else {
-                    posStart = textDocument.positionAt(methodPosition + ' function '.length);
-                    posEnd = textDocument.positionAt(' function '.length + methodPosition + strPhpMethodName.length);
-                }
-            }
-            arrResult.push({
-                uri: textDocument.uri,
-                positionStart: posStart,
-                positionEnd: posStart
-            });
-        }
-        if (arrResult.length === 1) {
-            for (let i = 0; i < arrResult.length; i++) {
-                const rec: MyResult = arrResult[i];
-                let showOptions: vscode.TextDocumentShowOptions = {
-                    viewColumn: undefined,
-                    preserveFocus: false,
-                    preview: true,
-                    selection: new vscode.Range(rec.positionStart, rec.positionEnd),
-                };
-                vscode.window.showTextDocument(rec.uri, showOptions);
-                break;
-            }
-        } else if (arrResult.length > 1) {
-            let arrStrPath: string[] = [];
-            for (let x = 0; x < arrResult.length; x++) {
-                const rec = arrResult[x];
-                arrStrPath.push(rec.uri.path);
-            }
-            vscode.window.showQuickPick(
-                arrStrPath,
-                {
-                    ignoreFocusOut: true,
-                    canPickMany: false,
-                }
-            ).then((value: string | undefined) => {
-                for (let i = 0; i < arrResult.length; i++) {
-                    const rec: MyResult = arrResult[i];
-                    if (value === rec.uri.path) {
-                        let showOptions: vscode.TextDocumentShowOptions = {
-                            viewColumn: undefined,
-                            preserveFocus: false,
-                            preview: true,
-                            selection: new vscode.Range(rec.positionStart, rec.positionEnd),
-                        };
-                        vscode.window.showTextDocument(rec.uri, showOptions);
-                        break;
-                    }
-                }
-            }, (reason: any) => {
-                console.log('onrejected:', reason);
-            });
-        }
-        progressParent.report({ increment: 99, message: "Done" });
-        console.log('console Done');
-        resolveParent('ResolveFindingDone');
-    }
-    function parseClassName(textDocument: vscode.TextDocument): string {
-        let strDocument = textDocument.getText();
-        const regEx: RegExp = /class \w+/g;
-        let match;
-        while (match = regEx.exec(strDocument)) {
-            const startPos: vscode.Position = textDocument.positionAt(match.index);
-            const endPos: vscode.Position = textDocument.positionAt(match.index + match[0].length);
-            let strMatch = match[0];
-            strMatch = strMatch.replace('class', '');
-            strMatch = strMatch.trim();
-            return strMatch;
-        }
-        return '';
-    }
-    function parseMethodName(textLine: vscode.TextLine): string {
-        let strDocument = textLine.text;
-        const regEx: RegExp = / function \w+\(/g;
-        let match;
-        while (match = regEx.exec(strDocument)) {
-            let strMatch = match[0]; 
-            strMatch = strMatch.replace('function', '')
-                .replace('(', '')
-                .trim();
-            return strMatch;
-        }
-        return '';
-    }
-    console.log('Decorator sample is activated');
     let timeout: NodeJS.Timer | undefined = undefined;
     const smallNumberDecorationType = vscode.window.createTextEditorDecorationType({
         borderWidth: '1px',
@@ -400,9 +251,9 @@ export function activate(context: vscode.ExtensionContext) {
     );
     context.subscriptions.push(mStatusBarItem);
     mStatusBarItem.hide(); 
-    context.subscriptions.push(disposableA);
-    context.subscriptions.push(disposableB);
-    context.subscriptions.push(disposableC);
+    context.subscriptions.push(disposableRouteToController);
+    context.subscriptions.push(disposableControllerToRoute);
+    context.subscriptions.push(disposableFindBladeUsage);
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(function () {
         updateUiStatusBar();
     }));
@@ -412,7 +263,7 @@ export function activate(context: vscode.ExtensionContext) {
     updateUiStatusBar();
 }
 export function deactivate() {
-    console.log('Extension "goto-route-controller-laravel" deactivate');
+    console.log(TAG, 'Extension "goto-route-controller-laravel" deactivate');
 }
 function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -429,17 +280,17 @@ function updateUiStatusBar() {
     if (isBladeFile(textEditor)) {
         mStatusBarItem.command = 'extension.findBladeUsage';
         mStatusBarItem.text = 'EP-findBladeUsage';
-        mStatusBarItem.tooltip = "Find blade usage";
+        mStatusBarItem.tooltip = 'Find blade usage';
         mStatusBarItem.show();
     } else if (isControllerFile(textEditor)) {
         mStatusBarItem.command = 'extension.openRoutesDeclarationFile';
         mStatusBarItem.text = 'EP-findRoute';
-        mStatusBarItem.tooltip = "Find route";
+        mStatusBarItem.tooltip = 'Find route';
         mStatusBarItem.show();
     } else if (isRouteFile(textEditor)) {
         mStatusBarItem.command = 'extension.openControllerClassFile';
         mStatusBarItem.text = 'EP-findController';
-        mStatusBarItem.tooltip = "Find controller";
+        mStatusBarItem.tooltip = 'Find controller';
         mStatusBarItem.show();
     }
 }
@@ -481,4 +332,165 @@ function isRouteFile(textEditor: vscode.TextEditor): Boolean {
         return true;
     }
     return false;
+}
+async function handleFindBladeUsage(
+    strToFind: string,
+    textEditor: vscode.TextEditor,
+    edit: vscode.TextEditorEdit,
+    args: any[],
+    resolveParent: (value?: string) => void,
+    rejectParent: (reason?: any) => void,
+    progressParent: vscode.Progress<{ message?: string; increment?: number }>,
+    tokenParent: vscode.CancellationToken
+) {
+    let urisAll: vscode.Uri[] = [];
+    let uris1 = await vscode.workspace.findFiles('**' + strFilenamePrefix + '.php', '{bootstrap,config,database,node_modules,storage,vendor}/**');
+    for (let i = 0; i < uris.length; i++) {
+        updateProgressMessage(i, uris, progressParent);
+        const uri = uris[i];
+        let filePath: string = uri.toString();
+        console.log(TAG, 'Scanning file:', filePath);
+        let textDocument: vscode.TextDocument = await vscode.workspace.openTextDocument(uri);
+        let docText: string = textDocument.getText();
+        if (docText.indexOf('<?') !== -1) {
+        } else {
+            continue;
+        }
+        let strNamespacePrefix: string = '';
+        let namespacePosition: number = docText.indexOf('namespace App\\Http\\Controllers' + strNamespacePrefix);
+        if (namespacePosition === -1) {
+            continue;
+        }
+        let arrNamespaceWithoutClassName = arrStrPhpNamespace.slice(0, -1); 
+        let strExtraSeparator: string = '\\';
+        if (arrStrPhpNamespace.length === 1) {
+            strExtraSeparator = ''; 
+        }
+        let strFullNamespace = 'namespace App\\Http\\Controllers' + strExtraSeparator + arrNamespaceWithoutClassName.join('\\') + ';';
+        let exactNamespacePosition: number = docText.indexOf(strFullNamespace);
+        if (exactNamespacePosition === -1) {
+            continue;
+        }
+        let classNamePosition: number = docText.indexOf('class ' + strFilenamePrefix + ' ');
+        if (classNamePosition === -1) {
+            continue;
+        }
+        let posStart: vscode.Position = textDocument.positionAt(classNamePosition + 'class '.length);
+        let posEnd: vscode.Position = textDocument.positionAt('class '.length + classNamePosition + strPhpMethodName.length);
+        if (strPhpMethodName.length > 0) {
+            let methodPosition: number = docText.indexOf(' function ' + strPhpMethodName + '(');
+            if (methodPosition === -1) {
+                continue;
+            } else {
+                posStart = textDocument.positionAt(methodPosition + ' function '.length);
+                posEnd = textDocument.positionAt(' function '.length + methodPosition + strPhpMethodName.length);
+            }
+        }
+        arrResult.push({
+            uri: textDocument.uri,
+            positionStart: posStart,
+            positionEnd: posStart
+        });
+    }
+    if (arrResult.length === 1) {
+        for (let i = 0; i < arrResult.length; i++) {
+            const rec: MyResult = arrResult[i];
+            let showOptions: vscode.TextDocumentShowOptions = {
+                viewColumn: undefined,
+                preserveFocus: false,
+                preview: true,
+                selection: new vscode.Range(rec.positionStart, rec.positionEnd),
+            };
+            vscode.window.showTextDocument(rec.uri, showOptions);
+            break;
+        }
+    } else if (arrResult.length > 1) {
+        let arrStrPath: string[] = [];
+        for (let x = 0; x < arrResult.length; x++) {
+            const rec = arrResult[x];
+            arrStrPath.push(rec.uri.path);
+        }
+        vscode.window.showQuickPick(
+            arrStrPath,
+            {
+                ignoreFocusOut: true,
+                canPickMany: false,
+            }
+        ).then((value: string | undefined) => {
+            for (let i = 0; i < arrResult.length; i++) {
+                const rec: MyResult = arrResult[i];
+                if (value === rec.uri.path) {
+                    let showOptions: vscode.TextDocumentShowOptions = {
+                        viewColumn: undefined,
+                        preserveFocus: false,
+                        preview: true,
+                        selection: new vscode.Range(rec.positionStart, rec.positionEnd),
+                    };
+                    vscode.window.showTextDocument(rec.uri, showOptions);
+                    break;
+                }
+            }
+        }, (reason: any) => {
+            console.log(TAG, 'onRejected:', reason);
+        });
+    }
+    progressParent.report({ increment: 100 });
+    console.log(TAG, 'handleRouteToController: done');
+    resolveParent('ResolveFindingDone');
+}
+function updateProgressMessage(i: number, uris: vscode.Uri[], progressParent: vscode.Progress<{ message?: string | undefined; increment?: number | undefined; }>) {
+    let ttt = uris.length / 100;
+    if ((i + 1) % 5 === 0) {
+        progressParent.report({message: '' + (i + 1) + '/' + uris.length + ' files scanned' });
+    }
+}
+function parseClassName(textDocument: vscode.TextDocument): string {
+    let strDocument = textDocument.getText();
+    const regEx: RegExp = /class \w+/g;
+    let match;
+    while (match = regEx.exec(strDocument)) {
+        const startPos: vscode.Position = textDocument.positionAt(match.index);
+        const endPos: vscode.Position = textDocument.positionAt(match.index + match[0].length);
+        let strMatch = match[0];
+        strMatch = strMatch.replace('class', '');
+        strMatch = strMatch.trim();
+        return strMatch;
+    }
+    return '';
+}
+function parseMethodName(textLine: vscode.TextLine): string {
+    let strDocument = textLine.text;
+    const regEx: RegExp = / function \w+\(/g;
+    let match;
+    while (match = regEx.exec(strDocument)) {
+        let strMatch = match[0]; 
+        strMatch = strMatch.replace('function', '')
+            .replace('(', '')
+            .trim();
+        return strMatch;
+    }
+    return '';
+}
+function routeFilterStr(strInput: string): string {
+    let offset = strInput.indexOf('Route::', 0);
+    if (offset === -1) {
+        return '';
+    }
+    offset = strInput.indexOf('(', offset);
+    if (offset === -1) {
+        return '';
+    }
+    offset = strInput.indexOf("'", offset);
+    if (offset === -1) {
+        return '';
+    }
+    offset = strInput.indexOf("'", offset);
+    if (offset === -1) {
+        return '';
+    }
+    offset = strInput.indexOf(',', offset);
+    if (offset === -1) {
+        return '';
+    }
+    return strInput.substr(offset);
 }
