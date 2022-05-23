@@ -32,18 +32,18 @@ export function activate(context: vscode.ExtensionContext) {
                 let textLine: vscode.TextLine = textEditor.document.lineAt(textEditor.selection.start);
                 let strUri = textEditor.document.uri.path;
                 if (strUri.indexOf('routes') === -1) {
-                    vscode.window.showInformationMessage('This file is not inside routes directory');
+                    vscode.window.showInformationMessage(TAG + ' Oops... This file is not inside routes directory');
                     reject(new Error('NotInsideRoutesDirectory'));
                     return;
                 }
                 if ((strUri.indexOf('web.php') !== -1) || (strUri.indexOf('api.php') !== -1)) {
                 } else {
-                    vscode.window.showInformationMessage('This file is not web.php or api.php');
+                    vscode.window.showInformationMessage(TAG + ' Oops... This file is not web.php or api.php');
                     reject(new Error('NotWebPhpOrApiPhp'));
                     return;
                 }
                 if (textEditor.document.getText().indexOf('Route::') === -1) {
-                    vscode.window.showInformationMessage('No route declaration found in this file');
+                    vscode.window.showInformationMessage(TAG + ' Oops... No route declaration found in this file');
                     reject(new Error('NoRouteDeclarationFound'));
                     return;
                 }
@@ -72,6 +72,7 @@ export function activate(context: vscode.ExtensionContext) {
                     break;
                 }
                 if (!isFound) {
+                    vscode.window.showInformationMessage(TAG + ' Oops... Current line does not contains controller class name');
                     reject(new Error('NoMatch'));
                 }
             });
@@ -140,13 +141,13 @@ export function activate(context: vscode.ExtensionContext) {
                 let textLine: vscode.TextLine = textEditor.document.lineAt(textEditor.selection.start);
                 let strUri = textEditor.document.uri.path;
                 if (strUri.indexOf('resources') === -1 || strUri.indexOf('views') === -1) {
-                    vscode.window.showInformationMessage('This file is not inside "views" directory');
+                    vscode.window.showInformationMessage(TAG + ' Oops... This file is not inside "views" directory');
                     reject(new Error('NotInsideViewsDirectory'));
                     return;
                 }
                 if ((strUri.indexOf('.blade.php') !== -1)) {
                 } else {
-                    vscode.window.showInformationMessage('This file is not a blade file');
+                    vscode.window.showInformationMessage(TAG + ' Oops... This file is not a blade file');
                     reject(new Error('NotBladeFile'));
                     return;
                 }
@@ -155,7 +156,7 @@ export function activate(context: vscode.ExtensionContext) {
                 let indexStrResources = strFiltered.indexOf('resources');
                 let strr = strFiltered.substr(indexStrResources);
                 if (strr.indexOf('resources') === -1 || strr.indexOf('views') === -1) {
-                    vscode.window.showInformationMessage('This file is not inside "views" directory (2)');
+                    vscode.window.showInformationMessage(TAG + ' Oops... This file is not inside "views" directory (2)');
                     reject(new Error('NotInsideViewsDirectory2'));
                     return;
                 }
@@ -164,7 +165,7 @@ export function activate(context: vscode.ExtensionContext) {
                 strr = strr.trim();
                 if (strr) {
                 } else {
-                    vscode.window.showInformationMessage('No usage found');
+                    vscode.window.showInformationMessage(TAG + ' Oops... No usage found');
                     reject(new Error('NoUsageFound'));
                     return;
                 }
@@ -435,13 +436,17 @@ async function handleFindBladeUsage(
         });
     }
     progressParent.report({ increment: 100 });
+    if (arrResult.length > 0) {
+        resolveParent('ResolveFindingDone');
+    } else {
+        progressParent.report({ message: 'Declaration not found.' });
+    }
     console.log(TAG, 'handleRouteToController: done');
-    resolveParent('ResolveFindingDone');
 }
 function updateProgressMessage(i: number, uris: vscode.Uri[], progressParent: vscode.Progress<{ message?: string | undefined; increment?: number | undefined; }>) {
     let ttt = uris.length / 100;
     if ((i + 1) % 5 === 0) {
-        progressParent.report({message: '' + (i + 1) + '/' + uris.length + ' files scanned' });
+        progressParent.report({ message: '' + (i + 1) + '/' + uris.length + ' files scanned' });
     }
 }
 function parseClassName(textDocument: vscode.TextDocument): string {
@@ -494,3 +499,19 @@ function routeFilterStr(strInput: string): string {
     }
     return strInput.substr(offset);
 }
+var rgbToHex = function (rgb: number): string {
+    var hex = Number(rgb).toString(16);
+    if (hex.length < 2) {
+        hex = "0" + hex;
+    }
+    return hex;
+};
+var fullColorHex = function (r: number, g: number, b: number) {
+    var red = rgbToHex(r);
+    var green = rgbToHex(g);
+    var blue = rgbToHex(b);
+    return red + green + blue;
+};
+var fullColorHexWithHash = function (r: number, g: number, b: number) {
+    return "#" + fullColorHex(r, g, b);
+};
