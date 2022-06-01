@@ -440,6 +440,10 @@ async function handleFindBladeUsage(
         resolveParent('ResolveFindingDone');
     } else {
         progressParent.report({ message: 'Declaration not found.' });
+        setTimeout(function () {
+            progressParent.report({ increment: 100 });
+            resolveParent('ResolveFindingDone');
+        }, 3000);
     }
     console.log(TAG, 'handleRouteToController: done');
 }
