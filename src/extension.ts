@@ -50,6 +50,7 @@ export function activate(context: vscode.ExtensionContext) {
                 let activeEditor: vscode.TextEditor = textEditor;
                 const text: string = textLine.text;
                 let isFound = false;
+                let _str_match: string = "";
                 let match;
                 const regEx: RegExp = /'([a-zA-Z\\]+)\w+(@\w+)?'/g;
                 while (match = regEx.exec(routeFilterStr(text))) {
@@ -57,23 +58,43 @@ export function activate(context: vscode.ExtensionContext) {
                     const endPos: vscode.Position = activeEditor.document.positionAt(match.index + match[0].length);
                     const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'File **' + match[0] + '**' };
                     let strResultMatch: string = match[0];
-                    handleRouteToController(strResultMatch, resolve, reject, progress, token)
-                        .then(() => {
-                        })
-                        .catch((reason: any) => {
-                            try {
-                                mReject(reason);
-                            } catch (e) {
-                            }
-                        })
-                        .finally(() => {
-                        });
+                    _str_match = strResultMatch;
                     isFound = true;
                     break;
                 }
-                if (!isFound) {
-                    vscode.window.showInformationMessage(TAG + ' Oops... Current line does not contains controller class name');
-                    reject(new Error('NoMatch'));
+                let _pos: number = text.lastIndexOf("@");
+                let _action: string = text.substr(_pos); 
+                let _pos_action_end = _action.indexOf("'");
+                _action = _action.substr(0, _pos_action_end);
+                _action = _action.replace("@", "").replace("'", ""); 
+                console.log('erlangp: hore', ">>>" + _action + "<<<");
+                let _class: string = text.substring(0, _pos);
+                let _pos_class_end: number = _pos;
+                let _pos_class_start: number = _class.lastIndexOf("'");
+                _class = _class.substring(_pos_class_start, _pos_class_end);
+                _class = _class.replace("@", "").replace("'", "");
+                console.log('erlangp: hore', ">>>" + _class + "<<<");
+                if (isFound) {
+                    handleRouteToController(_str_match, resolve, reject, progress, token).then((myCode: string) => {
+                        console.log('erlangp: myCode: ', myCode);
+                        if (myCode === "OK") {
+                            console.log("erlangp: Hore! Found using Method1");
+                            progress.report({ increment: 100 });
+                            resolve('ResolveFindingDone');
+                        } else {
+                            progress.report({ message: 'Please wait...' });
+                            runMethod2(_class, _action, progress, token, resolve);
+                        }
+                    }).catch((reason: any) => {
+                        try {
+                            mReject(reason);
+                        } catch (e) {
+                        }
+                    }).finally(() => {
+                    });
+                } else {
+                    console.log('erlangp: regex not match', '');
+                    runMethod2(_class, _action, progress, token, resolve);
                 }
             });
         });
@@ -263,6 +284,74 @@ export function activate(context: vscode.ExtensionContext) {
     }));
     updateUiStatusBar();
 }
+function runMethod2(_class: string, _action: string, progress: vscode.Progress<{ message?: string | undefined; increment?: number | undefined; }>, token: vscode.CancellationToken, resolve: (value?: string | undefined) => void) {
+    handleRouteToControllerV2(_class, _action, progress, token).then((arrResult) => {
+        if (arrResult.length === 1) {
+            for (let i = 0; i < arrResult.length; i++) {
+                const rec: MyResult = arrResult[i];
+                let showOptions: vscode.TextDocumentShowOptions = {
+                    viewColumn: undefined,
+                    preserveFocus: false,
+                    preview: true,
+                    selection: new vscode.Range(rec.positionStart, rec.positionEnd),
+                };
+                vscode.window.showTextDocument(rec.uri, showOptions);
+                break;
+            }
+        }
+        else if (arrResult.length > 1) {
+            let arrStrPath: string[] = [];
+            for (let x = 0; x < arrResult.length; x++) {
+                const rec = arrResult[x];
+                arrStrPath.push(rec.uri.path);
+            }
+            vscode.window.showQuickPick(
+                arrStrPath,
+                {
+                    ignoreFocusOut: true,
+                    canPickMany: false,
+                }
+            ).then((value: string | undefined) => {
+                for (let i = 0; i < arrResult.length; i++) {
+                    const rec: MyResult = arrResult[i];
+                    if (value === rec.uri.path) {
+                        let showOptions: vscode.TextDocumentShowOptions = {
+                            viewColumn: undefined,
+                            preserveFocus: false,
+                            preview: true,
+                            selection: new vscode.Range(rec.positionStart, rec.positionEnd),
+                        };
+                        vscode.window.showTextDocument(rec.uri, showOptions);
+                        break;
+                    }
+                }
+            }, (reason: any) => {
+                console.log(TAG, 'onRejected:', reason);
+            });
+        }
+        progress.report({ increment: 100 });
+        if (arrResult.length > 0) {
+            console.log("erlangp: Hore! Found using Method2");
+            resolve('ResolveFindingDone');
+            Promise.resolve(arrResult);
+        }
+        else {
+            progress.report({ message: 'Declaration not found.' });
+            setTimeout(function () {
+                progress.report({ increment: 100 });
+                resolve('ResolveFindingDone');
+            }, 3000);
+        }
+        console.log(TAG, 'handleRouteToController: done');
+    }).catch((reason: any) => {
+        try {
+            mReject(reason);
+        }
+        catch (e) {
+        }
+    }).finally(() => {
+    });
+}
 export function deactivate() {
     console.log(TAG, 'Extension "goto-route-controller-laravel" deactivate');
 }
@@ -345,7 +434,7 @@ async function handleFindBladeUsage(
     tokenParent: vscode.CancellationToken
 ) {
     let urisAll: vscode.Uri[] = [];
-    let uris1 = await vscode.workspace.findFiles('**' + strFilenamePrefix + '.php', '{bootstrap,config,database,node_modules,storage,vendor}/**');
+    let uris1 = await vscode.workspace.findFiles('**' + strFilenamePrefix + '.php', '{bootstrap,config,database,node_modules,storage,vendor}' + strFilenamePrefix + '.php', '{bootstrap,config,database,node_modules,storage,vendor}/**');
     for (let i = 0; i < uris.length; i++) {
         updateProgressMessage(i, uris, progressParent);
         const uri = uris[i];
@@ -435,17 +524,10 @@ async function handleFindBladeUsage(
             console.log(TAG, 'onRejected:', reason);
         });
     }
-    progressParent.report({ increment: 100 });
     if (arrResult.length > 0) {
-        resolveParent('ResolveFindingDone');
-    } else {
-        progressParent.report({ message: 'Declaration not found.' });
-        setTimeout(function () {
-            progressParent.report({ increment: 100 });
-            resolveParent('ResolveFindingDone');
-        }, 3000);
+        return Promise.resolve("OK");
     }
-    console.log(TAG, 'handleRouteToController: done');
+    return Promise.resolve("RunMethod2");
 }
 function updateProgressMessage(i: number, uris: vscode.Uri[], progressParent: vscode.Progress<{ message?: string | undefined; increment?: number | undefined; }>) {
     let ttt = uris.length / 100;
