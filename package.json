@@ -2,7 +2,7 @@
     "name": "goto-route-controller-laravel",
     "displayName": "goto-route-controller-laravel",
     "description": "laravel helper: go to route declaration, go to controller method declaration, find blade usage",
-    "version": "2.1.8",
+    "version": "2.1.9",
     "engines": {
         "vscode": "^1.33.0"
     },
@@ -10,11 +10,11 @@
         "Other"
     ],
     "publisher": "erlangparasu",
-    "homepage": "https://gitlab.com/erlangparasu/goto-route-controller-laravel/blob/master/README.md",
+    "homepage": "https://github.com/erlangparasu/goto-route-controller-laravel/blob/master/README.md",
     "license": "Apache-2.0",
     "repository": {
         "type": "git",
-        "url": "https://gitlab.com/erlangparasu/goto-route-controller-laravel"
+        "url": "https://github.com/erlangparasu/goto-route-controller-laravel"
     },
     "activationEvents": [
         "workspaceContains:**/artisan",

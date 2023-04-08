@@ -1,9 +1,10 @@
 "use strict";
 import * as vscode from 'vscode';
+import * as appParser from './route_parser_ver8';
 const TAG = 'EP:';
 let mThenableProgress;
 let mIntervalId: NodeJS.Timeout;
-let mResolve: (value?: string) => void;
+let mResolve: (value: string | PromiseLike<string>) => void;
 let mReject: (reason?: any) => void;
 let mStatusBarItem: vscode.StatusBarItem;
 interface MyResult {
@@ -22,7 +23,7 @@ export function activate(context: vscode.ExtensionContext) {
             location: vscode.ProgressLocation.Notification,
             title: 'EP: Finding controller declaration'
         }, (progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) => {
-            return new Promise<string>((resolve: (value?: string) => void, reject: (reason?: any) => void) => {
+            return new Promise<string>((resolve: (value: string | PromiseLike<string>) => void, reject: (reason?: any) => void) => {
                 try {
                     mReject(new Error('CancelProgress'));
                 } catch (e) {
@@ -53,7 +54,7 @@ export function activate(context: vscode.ExtensionContext) {
                 let _str_match: string = "";
                 let match;
                 const regEx: RegExp = /'([a-zA-Z\\]+)\w+(@\w+)?'/g;
-                while (match = regEx.exec(routeFilterStr(text))) {
+                while (match = regEx.exec(fnRouteFilterStr(text))) {
                     const startPos: vscode.Position = activeEditor.document.positionAt(match.index);
                     const endPos: vscode.Position = activeEditor.document.positionAt(match.index + match[0].length);
                     const decoration = { range: new vscode.Range(startPos, endPos), hoverMessage: 'File **' + match[0] + '**' };
@@ -75,7 +76,7 @@ export function activate(context: vscode.ExtensionContext) {
                 _class = _class.replace("@", "").replace("'", "");
                 console.log('erlangp: hore', ">>>" + _class + "<<<");
                 if (isFound) {
-                    handleRouteToController(_str_match, resolve, reject, progress, token).then((myCode: string) => {
+                    fnHandleRouteToController(_str_match, resolve, reject, progress, token).then((myCode: string) => {
                         console.log('erlangp: myCode: ', myCode);
                         if (myCode === "OK") {
                             console.log("erlangp: Hore! Found using Method1");
@@ -83,7 +84,7 @@ export function activate(context: vscode.ExtensionContext) {
                             resolve('ResolveFindingDone');
                         } else {
                             progress.report({ message: 'Please wait...' });
-                            runMethod2(_class, _action, progress, token, resolve);
+                            fnRunMethod2(_class, _action, progress, token, resolve);
                         }
                     }).catch((reason: any) => {
                         try {
@@ -94,7 +95,7 @@ export function activate(context: vscode.ExtensionContext) {
                     });
                 } else {
                     console.log('erlangp: regex not match', '');
-                    runMethod2(_class, _action, progress, token, resolve);
+                    fnRunMethod2(_class, _action, progress, token, resolve);
                 }
             });
         });
@@ -116,14 +117,14 @@ export function activate(context: vscode.ExtensionContext) {
         mThenableProgress = vscode.window.withProgress(
             progressOptions,
             (progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) => {
-                return new Promise<string>((resolve: (value?: string) => void, reject: (reason?: any) => void) => {
+                return new Promise<string>((resolve: (value: string | PromiseLike<string>) => void, reject: (reason?: any) => void) => {
                     try {
                         mReject(new Error('CancelProgress'));
                     } catch (e) {
                     }
                     mResolve = resolve;
                     mReject = reject;
-                    handleControllerToRoute(textEditor, edit, args, resolve, reject, progress, token)
+                    fnHandleControllerToRoute(textEditor, edit, args, resolve, reject, progress, token)
                         .then(() => {
                         })
                         .catch((reason: any) => {
@@ -152,7 +153,7 @@ export function activate(context: vscode.ExtensionContext) {
             location: vscode.ProgressLocation.Notification,
             title: 'EP: Finding blade usage'
         }, (progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) => {
-            return new Promise<string>((resolve: (value?: string) => void, reject: (reason?: any) => void) => {
+            return new Promise<string>((resolve: (value: string | PromiseLike<string>) => void, reject: (reason?: any) => void) => {
                 try {
                     mReject(new Error('CancelProgress'));
                 } catch (e) {
@@ -194,7 +195,7 @@ export function activate(context: vscode.ExtensionContext) {
                     .replace(/[/]/g, '.')
                     .trim();
                 let strToFind: string = "view('" + strr + "'"; 
-                handleFindBladeUsage(strToFind, textEditor, edit, args, resolve, reject, progress, token)
+                fnHandleFindBladeUsage(strToFind, textEditor, edit, args, resolve, reject, progress, token)
                     .then(() => {
                     })
                     .catch((reason: any) => {
@@ -232,7 +233,7 @@ export function activate(context: vscode.ExtensionContext) {
         backgroundColor: { id: 'myextension.largeNumberBackground' }
     });
     let activeEditor = vscode.window.activeTextEditor;
-    function updateDecorations() {
+    function fnUpdateDecorations() {
         if (!activeEditor) {
             return;
         }
@@ -250,12 +251,12 @@ export function activate(context: vscode.ExtensionContext) {
         activeEditor.setDecorations(smallNumberDecorationType, smallNumbers);
         activeEditor.setDecorations(largeNumberDecorationType, largeNumbers);
     }
-    function triggerUpdateDecorations() {
+    function fnTriggerUpdateDecorations() {
         if (timeout) {
             clearTimeout(timeout);
             timeout = undefined;
         }
-        timeout = setTimeout(updateDecorations, 500);
+        timeout = setTimeout(fnUpdateDecorations, 500);
     }
     if (activeEditor) {
     }
@@ -277,15 +278,15 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposableControllerToRoute);
     context.subscriptions.push(disposableFindBladeUsage);
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(function () {
-        updateUiStatusBar();
+        fnUpdateUiStatusBar();
     }));
     context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(function () {
-        updateUiStatusBar();
+        fnUpdateUiStatusBar();
     }));
-    updateUiStatusBar();
+    fnUpdateUiStatusBar();
 }
-function runMethod2(_class: string, _action: string, progress: vscode.Progress<{ message?: string | undefined; increment?: number | undefined; }>, token: vscode.CancellationToken, resolve: (value?: string | undefined) => void) {
-    handleRouteToControllerV2(_class, _action, progress, token).then((arrResult) => {
+function fnRunMethod2(_class: string, _action: string, progress: vscode.Progress<{ message?: string | undefined; increment?: number | undefined; }>, token: vscode.CancellationToken, resolve: (value: string | PromiseLike<string>) => void) {
+    fnHandleRouteToControllerV2(_class, _action, progress, token).then((arrResult) => {
         if (arrResult.length === 1) {
             for (let i = 0; i < arrResult.length; i++) {
                 const rec: MyResult = arrResult[i];
@@ -336,13 +337,13 @@ function runMethod2(_class: string, _action: string, progress: vscode.Progress<{
             Promise.resolve(arrResult);
         }
         else {
-            progress.report({ message: 'Declaration not found.' });
+            progress.report({ message: 'Declaration not found. [1]' });
             setTimeout(function () {
                 progress.report({ increment: 100 });
                 resolve('ResolveFindingDone');
             }, 3000);
         }
-        console.log(TAG, 'handleRouteToController: done');
+        console.log(TAG, 'fnHandleRouteToController: done');
     }).catch((reason: any) => {
         try {
             mReject(reason);
@@ -355,10 +356,10 @@ function runMethod2(_class: string, _action: string, progress: vscode.Progress<{
 export function deactivate() {
     console.log(TAG, 'Extension "goto-route-controller-laravel" deactivate');
 }
-function sleep(ms: number) {
+function fnSleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
-function updateUiStatusBar() {
+function fnUpdateUiStatusBar() {
     let textEditor = vscode.window.activeTextEditor;
     if (textEditor === undefined) {
         return;
@@ -367,24 +368,24 @@ function updateUiStatusBar() {
     mStatusBarItem.hide();
     mStatusBarItem.command = '';
     mStatusBarItem.text = '';
-    if (isBladeFile(textEditor)) {
+    if (fnIsBladeFile(textEditor)) {
         mStatusBarItem.command = 'extension.findBladeUsage';
         mStatusBarItem.text = 'EP-findBladeUsage';
         mStatusBarItem.tooltip = 'Find blade usage';
         mStatusBarItem.show();
-    } else if (isControllerFile(textEditor)) {
+    } else if (fnIsControllerFile(textEditor)) {
         mStatusBarItem.command = 'extension.openRoutesDeclarationFile';
         mStatusBarItem.text = 'EP-findRoute';
         mStatusBarItem.tooltip = 'Find route';
         mStatusBarItem.show();
-    } else if (isRouteFile(textEditor)) {
+    } else if (fnIsRouteFile(textEditor)) {
         mStatusBarItem.command = 'extension.openControllerClassFile';
         mStatusBarItem.text = 'EP-findController';
         mStatusBarItem.tooltip = 'Find controller';
         mStatusBarItem.show();
     }
 }
-function isControllerFile(textEditor: vscode.TextEditor): Boolean {
+function fnIsControllerFile(textEditor: vscode.TextEditor): Boolean {
     let docText = textEditor.document.getText();
     let namespacePosition: number = docText.indexOf('namespace App\\Http\\Controllers');
     if (namespacePosition === -1) {
@@ -392,7 +393,7 @@ function isControllerFile(textEditor: vscode.TextEditor): Boolean {
     }
     return true;
 }
-function isBladeFile(textEditor: vscode.TextEditor): Boolean {
+function fnIsBladeFile(textEditor: vscode.TextEditor): Boolean {
     let strUri = textEditor.document.uri.path;
     if (strUri.indexOf('resources') === -1 || strUri.indexOf('views') === -1) {
         return false;
@@ -416,19 +417,19 @@ function isBladeFile(textEditor: vscode.TextEditor): Boolean {
     }
     return false;
 }
-function isRouteFile(textEditor: vscode.TextEditor): Boolean {
+function fnIsRouteFile(textEditor: vscode.TextEditor): Boolean {
     let strUri = textEditor.document.uri.path;
     if ((strUri.indexOf('web.php') !== -1) || (strUri.indexOf('api.php') !== -1)) {
         return true;
     }
     return false;
 }
-async function handleFindBladeUsage(
+async function fnHandleFindBladeUsage(
     strToFind: string,
     textEditor: vscode.TextEditor,
     edit: vscode.TextEditorEdit,
     args: any[],
-    resolveParent: (value?: string) => void,
+    resolveParent: (value: string | PromiseLike<string>) => void,
     rejectParent: (reason?: any) => void,
     progressParent: vscode.Progress<{ message?: string; increment?: number }>,
     tokenParent: vscode.CancellationToken
@@ -436,7 +437,7 @@ async function handleFindBladeUsage(
     let urisAll: vscode.Uri[] = [];
     let uris1 = await vscode.workspace.findFiles('**' + strFilenamePrefix + '.php', '{bootstrap,config,database,node_modules,storage,vendor}' + strFilenamePrefix + '.php', '{bootstrap,config,database,node_modules,storage,vendor}/**');
     for (let i = 0; i < uris.length; i++) {
-        updateProgressMessage(i, uris, progressParent);
+        fnUpdateProgressMessage(i, uris, progressParent);
         const uri = uris[i];
         let filePath: string = uri.toString();
         console.log(TAG, 'Scanning file:', filePath);
@@ -447,7 +448,7 @@ async function handleFindBladeUsage(
             continue;
         }
         let strNamespacePrefix: string = '';
-        let namespacePosition: number = docText.indexOf('namespace App\\Http\\Controllers' + strNamespacePrefix);
+        let namespacePosition: number = docText.indexOf('namespace App\\Http\\Controllers' + strNamespacePrefix + '');
         if (namespacePosition === -1) {
             continue;
         }
@@ -457,11 +458,11 @@ async function handleFindBladeUsage(
             strExtraSeparator = ''; 
         }
         let strFullNamespace = 'namespace App\\Http\\Controllers' + strExtraSeparator + arrNamespaceWithoutClassName.join('\\') + ';';
-        let exactNamespacePosition: number = docText.indexOf(strFullNamespace);
+        let exactNamespacePosition: number = docText.indexOf('' + strFullNamespace + '');
         if (exactNamespacePosition === -1) {
             continue;
         }
-        let classNamePosition: number = docText.indexOf('class ' + strFilenamePrefix + ' ');
+        let classNamePosition: number = docText.indexOf('class ' + strFilenamePrefix + '');
         if (classNamePosition === -1) {
             continue;
         }
@@ -529,13 +530,13 @@ async function handleFindBladeUsage(
     }
     return Promise.resolve("RunMethod2");
 }
-function updateProgressMessage(i: number, uris: vscode.Uri[], progressParent: vscode.Progress<{ message?: string | undefined; increment?: number | undefined; }>) {
+function fnUpdateProgressMessage(i: number, uris: vscode.Uri[], progressParent: vscode.Progress<{ message?: string | undefined; increment?: number | undefined; }>) {
     let ttt = uris.length / 100;
     if ((i + 1) % 5 === 0) {
         progressParent.report({ message: '' + (i + 1) + '/' + uris.length + ' files scanned' });
     }
 }
-function parseClassName(textDocument: vscode.TextDocument): string {
+function fnParseClassName(textDocument: vscode.TextDocument): string {
     let strDocument = textDocument.getText();
     const regEx: RegExp = /class \w+/g;
     let match;
@@ -549,7 +550,7 @@ function parseClassName(textDocument: vscode.TextDocument): string {
     }
     return '';
 }
-function parseMethodName(textLine: vscode.TextLine): string {
+function fnParseMethodName(textLine: vscode.TextLine): string {
     let strDocument = textLine.text;
     const regEx: RegExp = / function \w+\(/g;
     let match;
@@ -562,7 +563,7 @@ function parseMethodName(textLine: vscode.TextLine): string {
     }
     return '';
 }
-function routeFilterStr(strInput: string): string {
+function fnRouteFilterStr(strInput: string): string {
     let offset = strInput.indexOf('Route::', 0);
     if (offset === -1) {
         return '';
@@ -585,19 +586,19 @@ function routeFilterStr(strInput: string): string {
     }
     return strInput.substr(offset);
 }
-var rgbToHex = function (rgb: number): string {
-    var hex = Number(rgb).toString(16);
+function fnRgbToHex(rgb: number): string {
+    let hex = Number(rgb).toString(16);
     if (hex.length < 2) {
         hex = "0" + hex;
     }
     return hex;
 };
-var fullColorHex = function (r: number, g: number, b: number) {
-    var red = rgbToHex(r);
-    var green = rgbToHex(g);
-    var blue = rgbToHex(b);
+function fnFullColorHex(r: number, g: number, b: number) {
+    let red = fnRgbToHex(r);
+    let green = fnRgbToHex(g);
+    let blue = fnRgbToHex(b);
     return red + green + blue;
 };
-var fullColorHexWithHash = function (r: number, g: number, b: number) {
-    return "#" + fullColorHex(r, g, b);
+function fnFullColorHexWithHash(r: number, g: number, b: number) {
+    return "#" + fnFullColorHex(r, g, b);
 };
