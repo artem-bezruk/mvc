@@ -1,3 +1,4 @@
+"use strict";
 export function fnTryParseRouteVer8(text: string) {
     let r_route = '(Route[:]{2})';
     let r_method = '([a-zA-Z]{1,})';
@@ -56,9 +57,20 @@ export function fnTryParseRouteVer8(text: string) {
         ];
     }
     let words: string[] = sub_text.split(',');
+    if (typeof words[0] !== 'string') {
+        return [
+            null,
+            new Error('words0_is_not_string'),
+        ];
+    }
+    if (typeof words[1] !== 'string') {
+        return [
+            null,
+            new Error('words1_is_not_string'),
+        ];
+    }
     let class_text: string = words[0];
     let action_text: string = words[1];
-    console.log({ action_text });
     class_text = class_text.trim();
     action_text = action_text.trim();
     let action_regex = new RegExp('^[\']([_a-zA-Z0-9]{1,})[\']$');
@@ -98,6 +110,9 @@ export function fnTryParseRouteVer8(text: string) {
     if (is_absolute_path) {
         class_text = class_text.replace('\\', '');
     }
+    if (0 == class_text.indexOf('App\\')) {
+        is_absolute_path = true;
+    }
     let class_dot = class_text.replace(new RegExp(/[\\]{1}/gi), '.');
     if (0 == class_dot.length) {
         return [
@@ -117,6 +132,7 @@ export function fnTryParseRouteVer8(text: string) {
         class: class_text,
         class_dot: class_dot,
         class_parts: klass_parts,
+        use_class_name: klass_parts[klass_parts.length - 1],
         action: action_text,
     };
     return [
@@ -124,27 +140,3 @@ export function fnTryParseRouteVer8(text: string) {
         null,
     ];
 }
-function test1() {
-    let input_line = "Route::get('orders/index', [App\\Http\\Controllers\\OrderController::class,'index'])->name('orders.index');"
-    let [data, error] = fnTryParseRouteVer8(input_line);
-    console.log('test1=', { data }, { error });
-}
-function test2() {
-    let input_line = "Route::get('/user', [UserController::class, 'index']);"
-    let [data, error] = fnTryParseRouteVer8(input_line);
-    console.log('test2=', { data }, { error });
-}
-function test3() {
-    let input_line = "Route::get(  '/user'  ,  [  UserController::class  ,  'index'  ]   )  ;  "
-    let [data, error] = fnTryParseRouteVer8(input_line);
-    console.log('test3=', { data }, { error });
-}
-function test4() {
-    let input_line = "Route::get('orders/index', [\\App\\Http\\Controllers\\OrderController::class,'index'])->name('orders.index');"
-    let [data, error] = fnTryParseRouteVer8(input_line);
-    console.log('test4=', { data }, { error });
-}
-test1();
-test2();
-test3();
-test4();

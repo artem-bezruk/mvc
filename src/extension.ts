@@ -1,6 +1,7 @@
 "use strict";
 import * as vscode from 'vscode';
-import * as appParser from './route_parser_ver8';
+import * as appRouteParser from './route_parser_ver8';
+import * as appUseImportParser from './use_import_parser_ver8';
 const TAG = 'EP:';
 let mThenableProgress;
 let mIntervalId: NodeJS.Timeout;
@@ -63,40 +64,263 @@ export function activate(context: vscode.ExtensionContext) {
                     isFound = true;
                     break;
                 }
-                let _pos: number = text.lastIndexOf("@");
-                let _action: string = text.substr(_pos); 
-                let _pos_action_end = _action.indexOf("'");
-                _action = _action.substr(0, _pos_action_end);
-                _action = _action.replace("@", "").replace("'", ""); 
-                console.log('erlangp: hore', ">>>" + _action + "<<<");
-                let _class: string = text.substring(0, _pos);
-                let _pos_class_end: number = _pos;
-                let _pos_class_start: number = _class.lastIndexOf("'");
-                _class = _class.substring(_pos_class_start, _pos_class_end);
-                _class = _class.replace("@", "").replace("'", "");
-                console.log('erlangp: hore', ">>>" + _class + "<<<");
-                if (isFound) {
-                    fnHandleRouteToController(_str_match, resolve, reject, progress, token).then((myCode: string) => {
-                        console.log('erlangp: myCode: ', myCode);
-                        if (myCode === "OK") {
-                            console.log("erlangp: Hore! Found using Method1");
-                            progress.report({ increment: 100 });
+                let temp_location_summ = {
+                    found: false,
+                    summ_klass_parts: [""],
+                    summ_klass_name: "",
+                    summ_action: "",
+                    use: {},
+                    route: {},
+                };
+                try {
+                    let [parsed_route, error] = appRouteParser.fnTryParseRouteVer8(text);
+                    console.log('route_parser=',);
+                    if (null != parsed_route) {
+                        let [results, err2] = appUseImportParser.fnTryParseUseImportVer8(
+                            textEditor.document.getText()
+                        );
+                        console.log('use_import_parser=',);
+                        if (null != results) {
+                            for (let index = 0; index < results.length; index++) {
+                                const parsed_use = results[index];
+                                if (parsed_route instanceof Error) {
+                                    continue;
+                                }
+                                if (parsed_use instanceof Error) {
+                                    continue;
+                                }
+                                if (null == parsed_route.use_class_name) {
+                                    continue;
+                                }
+                                if (null == parsed_use.useable_class_name) {
+                                    continue;
+                                }
+                                if (parsed_route.use_class_name == parsed_use.useable_class_name) {
+                                    temp_location_summ.found = true;
+                                    temp_location_summ.use = parsed_use;
+                                    temp_location_summ.route = parsed_route;
+                                    temp_location_summ.summ_klass_parts = parsed_use.class_parts;
+                                    temp_location_summ.summ_klass_name = parsed_use.useable_class_name;
+                                    temp_location_summ.summ_action = parsed_route.action;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('parsing_error=', { error });
+                }
+                console.log({ temp_location_summ: temp_location_summ });
+                try {
+                    fnFindAndOpenControllerFile(
+                        temp_location_summ,
+                        progress,
+                        token,
+                    ).then((arrResult) => {
+                        if (arrResult.length === 1) {
+                            for (let i = 0; i < arrResult.length; i++) {
+                                const rec: MyResult = arrResult[i];
+                                let showOptions: vscode.TextDocumentShowOptions = {
+                                    viewColumn: undefined,
+                                    preserveFocus: false,
+                                    preview: true,
+                                    selection: new vscode.Range(rec.positionStart, rec.positionEnd),
+                                };
+                                vscode.window.showTextDocument(rec.uri, showOptions);
+                                break;
+                            }
+                        }
+                        else if (arrResult.length > 1) {
+                            let arrStrPath: string[] = [];
+                            for (let x = 0; x < arrResult.length; x++) {
+                                const rec = arrResult[x];
+                                arrStrPath.push(rec.uri.path);
+                            }
+                            vscode.window.showQuickPick(
+                                arrStrPath,
+                                {
+                                    ignoreFocusOut: true,
+                                    canPickMany: false,
+                                }
+                            ).then((value: string | undefined) => {
+                                for (let i = 0; i < arrResult.length; i++) {
+                                    const rec: MyResult = arrResult[i];
+                                    if (value === rec.uri.path) {
+                                        let showOptions: vscode.TextDocumentShowOptions = {
+                                            viewColumn: undefined,
+                                            preserveFocus: false,
+                                            preview: true,
+                                            selection: new vscode.Range(rec.positionStart, rec.positionEnd),
+                                        };
+                                        vscode.window.showTextDocument(rec.uri, showOptions);
+                                        break;
+                                    }
+                                }
+                            }, (reason: any) => {
+                                console.log('fnFindAndOpenControllerFile:', 'onRejected:', { reason });
+                            });
+                        }
+                        progress.report({ increment: 100 });
+                        if (arrResult.length > 0) {
+                            console.log('fnFindAndOpenControllerFile:', "arrResult.length > 0");
                             resolve('ResolveFindingDone');
-                        } else {
-                            progress.report({ message: 'Please wait...' });
-                            fnRunMethod2(_class, _action, progress, token, resolve);
+                            Promise.resolve(arrResult);
                         }
+                        else {
+                            progress.report({ message: 'Declaration not found. [1]' });
+                            setTimeout(function () {
+                                progress.report({ increment: 100 });
+                                resolve('ResolveFindingDone');
+                            }, 3000);
+                        }
+                        console.log('fnFindAndOpenControllerFile:', 'done');
                     }).catch((reason: any) => {
-                        try {
-                            mReject(reason);
-                        } catch (e) {
-                        }
+                        console.error('fnFindAndOpenControllerFile:', { reason });
+                        _fnOtherWayVer8FullPathController();
                     }).finally(() => {
                     });
-                } else {
-                    console.log('erlangp: regex not match', '');
-                    fnRunMethod2(_class, _action, progress, token, resolve);
+                } catch (error) {
+                    console.error('fnFindAndOpenControllerFile:', { error });
+                    _fnOtherWayVer8FullPathController();
                 }
+                function _fnOtherWayVer8FullPathController() {
+                    let fullpathctr_location_summ = {
+                        found: false,
+                        is_class_path_absolute: false,
+                        class: "",
+                        class_dot: "",
+                        class_parts: [""],
+                        use_class_name: "",
+                        action: "",
+                    };
+                    try {
+                        let [parsed_route, error] = appRouteParser.fnTryParseRouteVer8(text);
+                        console.log('route_parser=');
+                        if (null != parsed_route) {
+                            if (parsed_route instanceof Error) {
+                                throw new Error("");
+                            }
+                            fullpathctr_location_summ.found = true;
+                            fullpathctr_location_summ.is_class_path_absolute = parsed_route.is_class_path_absolute;
+                            fullpathctr_location_summ.class = parsed_route.class;
+                            fullpathctr_location_summ.class_dot = parsed_route.class_dot;
+                            fullpathctr_location_summ.class_parts = parsed_route.class_parts;
+                            fullpathctr_location_summ.use_class_name = parsed_route.use_class_name;
+                            fullpathctr_location_summ.action = parsed_route.action;
+                        }
+                    } catch (error) {
+                        console.error('parsing_error=', { error });
+                    }
+                    console.log({ fullpathctr_location_summ });
+                    try {
+                        fnFindAndOpenFullPathControllerFile(
+                            fullpathctr_location_summ,
+                            progress,
+                            token,
+                        ).then((arrResult) => {
+                            if (arrResult.length === 1) {
+                                for (let i = 0; i < arrResult.length; i++) {
+                                    const rec: MyResult = arrResult[i];
+                                    let showOptions: vscode.TextDocumentShowOptions = {
+                                        viewColumn: undefined,
+                                        preserveFocus: false,
+                                        preview: true,
+                                        selection: new vscode.Range(rec.positionStart, rec.positionEnd),
+                                    };
+                                    vscode.window.showTextDocument(rec.uri, showOptions);
+                                    break;
+                                }
+                            }
+                            else if (arrResult.length > 1) {
+                                let arrStrPath: string[] = [];
+                                for (let x = 0; x < arrResult.length; x++) {
+                                    const rec = arrResult[x];
+                                    arrStrPath.push(rec.uri.path);
+                                }
+                                vscode.window.showQuickPick(
+                                    arrStrPath,
+                                    {
+                                        ignoreFocusOut: true,
+                                        canPickMany: false,
+                                    }
+                                ).then((value: string | undefined) => {
+                                    for (let i = 0; i < arrResult.length; i++) {
+                                        const rec: MyResult = arrResult[i];
+                                        if (value === rec.uri.path) {
+                                            let showOptions: vscode.TextDocumentShowOptions = {
+                                                viewColumn: undefined,
+                                                preserveFocus: false,
+                                                preview: true,
+                                                selection: new vscode.Range(rec.positionStart, rec.positionEnd),
+                                            };
+                                            vscode.window.showTextDocument(rec.uri, showOptions);
+                                            break;
+                                        }
+                                    }
+                                }, (reason: any) => {
+                                    console.log('fnFindAndOpenFullPathControllerFile:', 'onRejected:', reason);
+                                });
+                            }
+                            progress.report({ increment: 100 });
+                            if (arrResult.length > 0) {
+                                console.log('fnFindAndOpenFullPathControllerFile:', "erlangp: Hore! Found using Method3");
+                                resolve('ResolveFindingDone');
+                                Promise.resolve(arrResult);
+                            }
+                            else {
+                                progress.report({ message: 'Declaration not found. [1]' });
+                                setTimeout(function () {
+                                    progress.report({ increment: 100 });
+                                    resolve('ResolveFindingDone');
+                                }, 3000);
+                            }
+                            console.log('fnFindAndOpenFullPathControllerFile:', 'done');
+                        }).catch((reason: any) => {
+                            console.error('fnFindAndOpenFullPathControllerFile:', { reason });
+                            _fnOtherWayVer1();
+                        }).finally(() => {
+                        });
+                    } catch (error) {
+                        console.error('fnFindAndOpenFullPathControllerFile:', { error });
+                        _fnOtherWayVer1();
+                    }
+                }
+                function _fnOtherWayVer1() {
+                    let _pos: number = text.lastIndexOf("@");
+                    let _action: string = text.substring(_pos); 
+                    let _pos_action_end = _action.indexOf("'");
+                    _action = _action.substring(0, _pos_action_end);
+                    _action = _action.replace("@", "").replace("'", ""); 
+                    console.log('erlangp: hore', ">>>" + _action + "<<<");
+                    let _class: string = text.substring(0, _pos);
+                    let _pos_class_end: number = _pos;
+                    let _pos_class_start: number = _class.lastIndexOf("'");
+                    _class = _class.substring(_pos_class_start, _pos_class_end);
+                    _class = _class.replace("@", "").replace("'", "");
+                    console.log('erlangp: hore', ">>>" + _class + "<<<");
+                    if (isFound) {
+                        fnHandleRouteToController(_str_match, resolve, reject, progress, token).then((myCode: string) => {
+                            console.log('erlangp: myCode: ', myCode);
+                            if (myCode === "OK") {
+                                console.log("erlangp: Hore! Found using Method1");
+                                progress.report({ increment: 100 });
+                                resolve('ResolveFindingDone');
+                            } else {
+                                progress.report({ message: 'Please wait...' });
+                                fnRunMethod2(_class, _action, progress, token, resolve);
+                            }
+                        }).catch((reason: any) => {
+                            try {
+                                mReject(reason);
+                            } catch (e) {
+                            }
+                        }).finally(() => {
+                        });
+                    } else {
+                        console.log('erlangp: regex not match', '');
+                        fnRunMethod2(_class, _action, progress, token, resolve);
+                    }
+                };
             });
         });
         mThenableProgress.then((value: string) => {
@@ -124,14 +348,21 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                     mResolve = resolve;
                     mReject = reject;
-                    fnHandleControllerToRoute(textEditor, edit, args, resolve, reject, progress, token)
+                    fnHandleControllerToRouteVer1(textEditor, edit, args, resolve, reject, progress, token)
                         .then(() => {
                         })
                         .catch((reason: any) => {
-                            try {
-                                mReject(reason);
-                            } catch (e) {
-                            }
+                            fnHandleControllerToRouteVer8(textEditor, edit, args, resolve, reject, progress, token)
+                                .then(() => {
+                                })
+                                .catch((reason: any) => {
+                                    try {
+                                        mReject(reason);
+                                    } catch (e) {
+                                    }
+                                })
+                                .finally(() => {
+                                });
                         })
                         .finally(() => {
                         });
@@ -176,14 +407,14 @@ export function activate(context: vscode.ExtensionContext) {
                 let strFiltered: string = strUri.replace('.blade.php', '')
                     .trim();
                 let indexStrResources = strFiltered.indexOf('resources');
-                let strr = strFiltered.substr(indexStrResources);
+                let strr = strFiltered.substring(indexStrResources);
                 if (strr.indexOf('resources') === -1 || strr.indexOf('views') === -1) {
                     vscode.window.showInformationMessage(TAG + ' Oops... This file is not inside "views" directory (2)');
                     reject(new Error('NotInsideViewsDirectory2'));
                     return;
                 }
                 let indexStrViews = strr.indexOf('views');
-                strr = strr.substr(indexStrViews + 'views'.length + 1); 
+                strr = strr.substring(indexStrViews + 'views'.length + 1); 
                 strr = strr.trim();
                 if (strr) {
                 } else {
@@ -405,12 +636,12 @@ function fnIsBladeFile(textEditor: vscode.TextEditor): Boolean {
     let strFiltered: string = strUri.replace('.blade.php', '')
         .trim();
     let indexStrResources = strFiltered.indexOf('resources');
-    let strr = strFiltered.substr(indexStrResources);
+    let strr = strFiltered.substring(indexStrResources);
     if (strr.indexOf('resources') === -1 || strr.indexOf('views') === -1) {
         return false;
     }
     let indexStrViews = strr.indexOf('views');
-    strr = strr.substr(indexStrViews + 'views'.length + 1); 
+    strr = strr.substring(indexStrViews + 'views'.length + 1); 
     strr = strr.trim();
     if (strr) {
         return true;
@@ -435,7 +666,10 @@ async function fnHandleFindBladeUsage(
     tokenParent: vscode.CancellationToken
 ) {
     let urisAll: vscode.Uri[] = [];
-    let uris1 = await vscode.workspace.findFiles('**' + strFilenamePrefix + '.php', '{bootstrap,config,database,node_modules,storage,vendor}' + strFilenamePrefix + '.php', '{bootstrap,config,database,node_modules,storage,vendor}/**');
+    let uris1 = await vscode.workspace.findFiles('**' + strFilenamePrefix + '.php', '{bootstrap,config,database,node_modules,storage,vendor}' + strFilenamePrefix + '.php', '{bootstrap,config,database,node_modules,storage,vendor}' + summ.summ_klass_name + '.php', '{bootstrap,config,database,node_modules,storage,vendor}' + abcKlassName + '.php', '{bootstrap,config,database,node_modules,storage,vendor}/**');
+    if (uris.length === 0) {
+        return Promise.reject(new Error('local.NoControllerFileFound'));
+    }
     for (let i = 0; i < uris.length; i++) {
         fnUpdateProgressMessage(i, uris, progressParent);
         const uri = uris[i];
@@ -445,25 +679,32 @@ async function fnHandleFindBladeUsage(
         let docText: string = textDocument.getText();
         if (docText.indexOf('<?') !== -1) {
         } else {
+            errorList.push('NotPhpFile');
             continue;
         }
         let strNamespacePrefix: string = '';
         let namespacePosition: number = docText.indexOf('namespace App\\Http\\Controllers' + strNamespacePrefix + '');
         if (namespacePosition === -1) {
+            errorList.push('NamespaceNotFound');
             continue;
         }
-        let arrNamespaceWithoutClassName = arrStrPhpNamespace.slice(0, -1); 
+        let arrNamespaceWithoutClassName = summ.class_parts.slice(0, -1); 
         let strExtraSeparator: string = '\\';
-        if (arrStrPhpNamespace.length === 1) {
+        if (summ.class_parts.length === 1) {
             strExtraSeparator = ''; 
         }
-        let strFullNamespace = 'namespace App\\Http\\Controllers' + strExtraSeparator + arrNamespaceWithoutClassName.join('\\') + ';';
+        if (summ.class_parts[0] == 'App') {
+            strExtraSeparator = ''; 
+        }
+        let strFullNamespace = 'namespace ' + strExtraSeparator + arrNamespaceWithoutClassName.join('\\') + ';';
         let exactNamespacePosition: number = docText.indexOf('' + strFullNamespace + '');
         if (exactNamespacePosition === -1) {
+            errorList.push('ExactNamespaceNotFound');
             continue;
         }
-        let classNamePosition: number = docText.indexOf('class ' + strFilenamePrefix + '');
+        let classNamePosition: number = docText.indexOf('class ' + abcKlassName + '');
         if (classNamePosition === -1) {
+            errorList.push('ClassNameNotFound');
             continue;
         }
         let posStart: vscode.Position = textDocument.positionAt(classNamePosition + 'class '.length);
@@ -471,6 +712,7 @@ async function fnHandleFindBladeUsage(
         if (strPhpMethodName.length > 0) {
             let methodPosition: number = docText.indexOf(' function ' + strPhpMethodName + '(');
             if (methodPosition === -1) {
+                errorList.push('MethodNameNotFound');
                 continue;
             } else {
                 posStart = textDocument.positionAt(methodPosition + ' function '.length);
@@ -483,122 +725,10 @@ async function fnHandleFindBladeUsage(
             positionEnd: posStart
         });
     }
-    if (arrResult.length === 1) {
-        for (let i = 0; i < arrResult.length; i++) {
-            const rec: MyResult = arrResult[i];
-            let showOptions: vscode.TextDocumentShowOptions = {
-                viewColumn: undefined,
-                preserveFocus: false,
-                preview: true,
-                selection: new vscode.Range(rec.positionStart, rec.positionEnd),
-            };
-            vscode.window.showTextDocument(rec.uri, showOptions);
-            break;
+    if (arrResult.length === 0) {
+        if (errorList.length > 0) {
+            return Promise.reject(errorList[0]);
         }
-    } else if (arrResult.length > 1) {
-        let arrStrPath: string[] = [];
-        for (let x = 0; x < arrResult.length; x++) {
-            const rec = arrResult[x];
-            arrStrPath.push(rec.uri.path);
-        }
-        vscode.window.showQuickPick(
-            arrStrPath,
-            {
-                ignoreFocusOut: true,
-                canPickMany: false,
-            }
-        ).then((value: string | undefined) => {
-            for (let i = 0; i < arrResult.length; i++) {
-                const rec: MyResult = arrResult[i];
-                if (value === rec.uri.path) {
-                    let showOptions: vscode.TextDocumentShowOptions = {
-                        viewColumn: undefined,
-                        preserveFocus: false,
-                        preview: true,
-                        selection: new vscode.Range(rec.positionStart, rec.positionEnd),
-                    };
-                    vscode.window.showTextDocument(rec.uri, showOptions);
-                    break;
-                }
-            }
-        }, (reason: any) => {
-            console.log(TAG, 'onRejected:', reason);
-        });
     }
-    if (arrResult.length > 0) {
-        return Promise.resolve("OK");
-    }
-    return Promise.resolve("RunMethod2");
+    return Promise.resolve(arrResult);
 }
-function fnUpdateProgressMessage(i: number, uris: vscode.Uri[], progressParent: vscode.Progress<{ message?: string | undefined; increment?: number | undefined; }>) {
-    let ttt = uris.length / 100;
-    if ((i + 1) % 5 === 0) {
-        progressParent.report({ message: '' + (i + 1) + '/' + uris.length + ' files scanned' });
-    }
-}
-function fnParseClassName(textDocument: vscode.TextDocument): string {
-    let strDocument = textDocument.getText();
-    const regEx: RegExp = /class \w+/g;
-    let match;
-    while (match = regEx.exec(strDocument)) {
-        const startPos: vscode.Position = textDocument.positionAt(match.index);
-        const endPos: vscode.Position = textDocument.positionAt(match.index + match[0].length);
-        let strMatch = match[0];
-        strMatch = strMatch.replace('class', '');
-        strMatch = strMatch.trim();
-        return strMatch;
-    }
-    return '';
-}
-function fnParseMethodName(textLine: vscode.TextLine): string {
-    let strDocument = textLine.text;
-    const regEx: RegExp = / function \w+\(/g;
-    let match;
-    while (match = regEx.exec(strDocument)) {
-        let strMatch = match[0]; 
-        strMatch = strMatch.replace('function', '')
-            .replace('(', '')
-            .trim();
-        return strMatch;
-    }
-    return '';
-}
-function fnRouteFilterStr(strInput: string): string {
-    let offset = strInput.indexOf('Route::', 0);
-    if (offset === -1) {
-        return '';
-    }
-    offset = strInput.indexOf('(', offset);
-    if (offset === -1) {
-        return '';
-    }
-    offset = strInput.indexOf("'", offset);
-    if (offset === -1) {
-        return '';
-    }
-    offset = strInput.indexOf("'", offset);
-    if (offset === -1) {
-        return '';
-    }
-    offset = strInput.indexOf(',', offset);
-    if (offset === -1) {
-        return '';
-    }
-    return strInput.substr(offset);
-}
-function fnRgbToHex(rgb: number): string {
-    let hex = Number(rgb).toString(16);
-    if (hex.length < 2) {
-        hex = "0" + hex;
-    }
-    return hex;
-};
-function fnFullColorHex(r: number, g: number, b: number) {
-    let red = fnRgbToHex(r);
-    let green = fnRgbToHex(g);
-    let blue = fnRgbToHex(b);
-    return red + green + blue;
-};
-function fnFullColorHexWithHash(r: number, g: number, b: number) {
-    return "#" + fnFullColorHex(r, g, b);
-};
