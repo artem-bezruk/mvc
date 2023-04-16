@@ -1,7 +1,8 @@
 "use strict";
 import * as vscode from 'vscode';
-import * as appRouteParser from './route_parser_ver8';
-import * as appUseImportParser from './use_import_parser_ver8';
+import * as appRouteParser from './route_parser_v8';
+import * as appRouteParser10 from './route_parser_v10';
+import * as appUseImportParser from './use_import_parser_v8';
 const TAG = 'EP:';
 let mThenableProgress;
 let mIntervalId: NodeJS.Timeout;

@@ -1,5 +1,5 @@
 "use strict";
-import { fnTryParseRouteVer8 } from "../route_parser_ver8";
+import { fnTryParseRouteVer8 } from "../route_parser_v8";
 import { kInputTexts } from "./data/sample_input_texts_for_test";
 function test1() {
     let input_line = "Route::get('orders/index', [App\\Http\\Controllers\\OrderController::class,'index'])->name('orders.index');"
